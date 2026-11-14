@@ -1,0 +1,12 @@
+{
+  "name": "ai-control-center",
+  "owner": { "name": "AI Control Center" },
+  "metadata": { "description": "Claude Code mod that feeds AI Control Center with Claude's own quota figures." },
+  "plugins": [
+    {
+      "name": "ai-control-center-feed",
+      "source": "./apps/claude-mod",
+      "description": "Writes Claude Code's rate-limit windows (5 h, 7 d), context fill and session cost to the local AI Control Center inbox, from every surface (terminal and the VS Code panel)."
+    }
+  ]
+}

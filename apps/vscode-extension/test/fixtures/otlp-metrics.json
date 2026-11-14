@@ -1,0 +1,23 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": { "attributes": [ { "key": "service.name", "value": { "stringValue": "claude-code" } }, { "key": "acc.profile", "value": { "stringValue": "claude-default" } } ] },
+      "scopeMetrics": [ { "metrics": [
+        { "name": "claude_code.token.usage", "sum": { "aggregationTemporality": 1, "isMonotonic": true, "dataPoints": [
+          { "attributes": [ { "key": "type", "value": { "stringValue": "input" } }, { "key": "model", "value": { "stringValue": "claude-opus-5-5" } }, { "key": "session.id", "value": { "stringValue": "otel-s1" } } ], "startTimeUnixNano": "1893456000000000000", "timeUnixNano": "1893456030000000000", "asDouble": 120 },
+          { "attributes": [ { "key": "type", "value": { "stringValue": "output" } }, { "key": "model", "value": { "stringValue": "claude-opus-5-5" } }, { "key": "session.id", "value": { "stringValue": "otel-s1" } } ], "startTimeUnixNano": "1893456000000000000", "timeUnixNano": "1893456030000000000", "asDouble": 80 },
+          { "attributes": [ { "key": "type", "value": { "stringValue": "cacheRead" } }, { "key": "model", "value": { "stringValue": "claude-opus-5-5" } }, { "key": "session.id", "value": { "stringValue": "otel-s1" } } ], "startTimeUnixNano": "1893456000000000000", "timeUnixNano": "1893456030000000000", "asDouble": 5000 }
+        ] } },
+        { "name": "claude_code.cost.usage", "sum": { "aggregationTemporality": 1, "dataPoints": [
+          { "attributes": [ { "key": "model", "value": { "stringValue": "claude-opus-5-5" } }, { "key": "session.id", "value": { "stringValue": "otel-s1" } } ], "timeUnixNano": "1893456030000000000", "asDouble": 0.42 }
+        ] } }
+      ] } ]
+    },
+    {
+      "resource": { "attributes": [ { "key": "service.name", "value": { "stringValue": "claude-code" } } ] },
+      "scopeMetrics": [ { "metrics": [
+        { "name": "claude_code.token.usage", "sum": { "aggregationTemporality": 1, "dataPoints": [ { "attributes": [ { "key": "type", "value": { "stringValue": "input" } } ], "timeUnixNano": "1893456030000000000", "asDouble": 999 } ] } }
+      ] } ]
+    }
+  ]
+}

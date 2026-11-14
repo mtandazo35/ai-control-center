@@ -1,0 +1,11 @@
+src/**
+test/**
+test-host/**
+node_modules/**
+out/**
+tsconfig.json
+esbuild.mjs
+eslint.config.mjs
+vitest.config.ts
+**/*.map
+.gitignore

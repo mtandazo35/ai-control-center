@@ -1,0 +1,7 @@
+{
+  "name": "ai-control-center-feed",
+  "version": "0.1.0",
+  "description": "Hands Claude Code's own rate-limit windows (5 h, 7 d), context fill and session cost to the local AI Control Center inbox. Writes one small JSON file per session; reads and sends nothing else.",
+  "author": { "name": "AI Control Center" },
+  "license": "MIT"
+}

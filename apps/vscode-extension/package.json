@@ -1,0 +1,335 @@
+{
+  "name": "ai-control-center",
+  "displayName": "AI Control Center",
+  "description": "Monitoreo de cuotas oficiales y consumo local de Claude Code, Codex y Gemini/Antigravity por cuenta, con alertas, historial y recomendación asistida.",
+  "version": "0.1.0",
+  "publisher": "mtandazo35",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "claude",
+    "codex",
+    "gemini",
+    "quota",
+    "usage"
+  ],
+  "icon": "media/icon.png",
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiControlCenter",
+          "title": "AI Control Center",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "aiControlCenter": [
+        {
+          "id": "aiControlCenter.accounts",
+          "name": "Cuentas y cuotas"
+        },
+        {
+          "id": "aiControlCenter.alerts",
+          "name": "Alertas"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "aiControlCenter.accounts",
+        "contents": "Aún no hay perfiles detectados.\n[Detectar herramientas](command:aiControlCenter.detectTools)\n[Abrir dashboard](command:aiControlCenter.dashboard)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "aiControlCenter.dashboard",
+        "title": "Dashboard",
+        "category": "AI Control Center",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "aiControlCenter.openWeb",
+        "title": "Abrir panel web (navegador)",
+        "category": "AI Control Center",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "aiControlCenter.detectTools",
+        "title": "Detectar herramientas",
+        "category": "AI Control Center",
+        "icon": "$(search)"
+      },
+      {
+        "command": "aiControlCenter.refresh",
+        "title": "Actualizar datos",
+        "category": "AI Control Center",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "aiControlCenter.linkProfile",
+        "title": "Vincular perfil",
+        "category": "AI Control Center",
+        "icon": "$(add)"
+      },
+      {
+        "command": "aiControlCenter.editProfile",
+        "title": "Editar perfil (alias, habilitar, quitar)",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.testConnector",
+        "title": "Probar conector",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.showDataSource",
+        "title": "Ver origen del dato",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.chooseNext",
+        "title": "Elegir siguiente cuenta",
+        "category": "AI Control Center",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "aiControlCenter.openProfile",
+        "title": "Abrir perfil de VS Code",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.openTerminal",
+        "title": "Abrir terminal con perfil",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.export",
+        "title": "Exportar (CSV/JSON)",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.diagnostics",
+        "title": "Diagnóstico",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.enableClaudeQuotaCapture",
+        "title": "Claude: habilitar captura de cuota (statusLine)",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.disableClaudeQuotaCapture",
+        "title": "Claude: revertir captura de cuota (statusLine)",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.enableClaudeOtel",
+        "title": "Claude: habilitar telemetría OpenTelemetry local",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.disableClaudeOtel",
+        "title": "Claude: revertir telemetría OpenTelemetry local",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.manualSnapshot",
+        "title": "Registrar cuota manual",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.installAgent",
+        "title": "Instalar agente residente (opcional)",
+        "category": "AI Control Center"
+      },
+      {
+        "command": "aiControlCenter.uninstallMonitoring",
+        "title": "Desinstalar monitoreo",
+        "category": "AI Control Center"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "aiControlCenter.refresh",
+          "when": "view == aiControlCenter.accounts",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aiControlCenter.chooseNext",
+          "when": "view == aiControlCenter.accounts",
+          "group": "navigation@2"
+        },
+        {
+          "command": "aiControlCenter.dashboard",
+          "when": "view == aiControlCenter.accounts",
+          "group": "navigation@3"
+        },
+        {
+          "command": "aiControlCenter.linkProfile",
+          "when": "view == aiControlCenter.accounts",
+          "group": "navigation@4"
+        },
+        {
+          "command": "aiControlCenter.openWeb",
+          "when": "view == aiControlCenter.accounts",
+          "group": "navigation@5"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "aiControlCenter.testConnector",
+          "when": "view == aiControlCenter.accounts && viewItem =~ /^profile/"
+        },
+        {
+          "command": "aiControlCenter.editProfile",
+          "when": "view == aiControlCenter.accounts && viewItem =~ /^profile/"
+        },
+        {
+          "command": "aiControlCenter.openTerminal",
+          "when": "view == aiControlCenter.accounts && viewItem =~ /^profile-(claude|codex)/"
+        },
+        {
+          "command": "aiControlCenter.showDataSource",
+          "when": "view == aiControlCenter.accounts && viewItem =~ /^profile/"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AI Control Center",
+      "properties": {
+        "aiControlCenter.timeZone": {
+          "type": "string",
+          "default": "America/Guayaquil",
+          "description": "Zona horaria de visualización (IANA). Los datos se guardan en UTC."
+        },
+        "aiControlCenter.dataDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "Carpeta de la base SQLite compartida por ventanas y agente. Vacío = %LOCALAPPDATA%\\ai-control-center (Windows) o equivalente."
+        },
+        "aiControlCenter.pollMinutes": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "description": "Intervalo de lectura de cuotas oficiales (Codex App Server) y de los archivos locales."
+        },
+        "aiControlCenter.staleMinutes": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "description": "Una cuota con más antigüedad que esto se marca como desactualizada y no puntúa en la recomendación."
+        },
+        "aiControlCenter.alertThresholds": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "default": [
+            70,
+            85,
+            95
+          ],
+          "description": "Porcentajes de uso de una ventana oficial que disparan alerta."
+        },
+        "aiControlCenter.reservePercent": {
+          "type": "number",
+          "default": 10,
+          "description": "Reserva mínima: una cuenta cuya ventana más cargada deja menos de esto no se recomienda."
+        },
+        "aiControlCenter.resetSoonMinutes": {
+          "type": "number",
+          "default": 15,
+          "description": "Aviso de reinicio próximo para ventanas al 85 % o más."
+        },
+        "aiControlCenter.retentionDays": {
+          "type": "number",
+          "default": 90,
+          "description": "Días de historial que se conservan."
+        },
+        "aiControlCenter.otlpPort": {
+          "type": "number",
+          "default": 4318,
+          "description": "Puerto del receptor OTLP/HTTP local (solo 127.0.0.1)."
+        },
+        "aiControlCenter.codexCommand": {
+          "type": "string",
+          "default": "codex",
+          "description": "Ejecutable de Codex CLI usado para lanzar `codex app-server`."
+        },
+        "aiControlCenter.claudeCommand": {
+          "type": "string",
+          "default": "claude",
+          "description": "Ejecutable de Claude Code usado para `claude auth status`."
+        },
+        "aiControlCenter.notifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mostrar notificaciones de VS Code para alertas nuevas."
+        },
+        "aiControlCenter.demoMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Muestra datos SIMULADOS rotulados como demo. Nunca se guardan ni se mezclan con datos reales."
+        },
+        "aiControlCenter.webHost": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Interfaz del panel web local. 127.0.0.1 = solo este equipo; 0.0.0.0 = también la red (p. ej. el móvil), siempre con token."
+        },
+        "aiControlCenter.webPort": {
+          "type": "number",
+          "default": 4320,
+          "description": "Puerto del panel web local."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc -p . --noEmit",
+    "lint": "eslint src test test-host resources media",
+    "test": "vitest run",
+    "test:host": "node esbuild.mjs && node test-host/run.js",
+    "package": "node esbuild.mjs && vsce package --no-dependencies --allow-missing-repository --out ../../release/ai-control-center-0.1.0.vsix",
+    "check": "npm run typecheck && npm run lint && npm test && npm run package"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.19.0",
+    "@types/vscode": "^1.101.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.0",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.39.1",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^3.2.4"
+  },
+  "author": "mtandazo35"
+}

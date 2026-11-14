@@ -1,0 +1,7 @@
+I0115 12:20:40.413069       1 resolver.go:85] Model ID gemini-4-argon-high not in local config, defaulting to CCPA
+I0115 12:20:40.565661       1 printmode.go:208] Print mode: starting (promptLength=100, model="gemini-4-argon-high", conversationID="")
+I0115 12:20:42.957680       1 server.go:1233] Created conversation aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee (backend=BACKEND_TYPE_UNSPECIFIED)
+I0115 12:20:42.974567       1 server.go:1817] Sending user message to conversation aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee (items=1, media=0) PROMPT PRIVADO
+I0115 12:38:02.682043    1234 server.go:2723] Tool confirmation for conversation aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee step 171 (type=*gemini_coder_go_proto.Step_Generic approved=true)
+linea sin formato glog
+I0115 12:57:57.000001       1 session.go:250] Print mode: run finished

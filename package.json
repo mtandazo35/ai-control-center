@@ -1,0 +1,14 @@
+{
+  "name": "ai-control-center-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "check": "npm run check -w apps/vscode-extension",
+    "test": "npm test -w apps/vscode-extension",
+    "test:host": "npm run test:host -w apps/vscode-extension",
+    "package": "npm run package -w apps/vscode-extension"
+  },
+  "license": "MIT"
+}
