@@ -66,7 +66,11 @@ export interface ViewModel {
   timeZone: string;
   range: Range;
   profiles: ProfileView[];
-  recommendation: { summary: string; ranked: { id: string; title: string; classification: string; rationale: string; score: number | null }[] };
+  recommendation: {
+    summary: string;
+    /** classification: the recommender's code, plus 'sin-porcentaje' (no % published, but recent proof of use); classLabel: for display. */
+    ranked: { id: string; title: string; classification: string; classLabel: string; rationale: string; score: number | null }[];
+  };
   sessions: { title: string; project: string | null; model: string | null; startedLocal: string; lastSeenLocal: string; durationMin: number; active: boolean; tokens: number; source: string }[];
   alerts: (AlertRecord & { createdLocal: string })[];
   series: {
@@ -303,13 +307,19 @@ export function buildViewModel(input: BuildInput, settings: Settings, range: Ran
     profiles,
     recommendation: {
       summary: rec.summary,
-      ranked: rec.ranked.map((c) => ({
-        id: c.profile.id,
-        title: label(c.profile),
-        classification: c.classification,
-        rationale: c.rationale,
-        score: c.score,
-      })),
+      ranked: rec.ranked.map((c) => {
+        const view = profiles.find((p) => p.id === c.profile.id);
+        const usage = c.classification === 'sin-datos' && view ? usageWithoutPercent(c.profile, view, input.quotas, tz, now) : null;
+        const classification = usage ? 'sin-porcentaje' : c.classification;
+        return {
+          id: c.profile.id,
+          title: label(c.profile),
+          classification,
+          classLabel: CLASS_LABEL[classification] ?? classification,
+          rationale: usage ?? c.rationale,
+          score: c.score,
+        };
+      }),
     },
     sessions,
     alerts: input.alerts.map((a) => ({ ...a, createdLocal: formatInZone(a.createdAt, tz) })),
@@ -342,4 +352,42 @@ export function statusText(profiles: ProfileView[], isDemo: boolean): { text: st
   if (parts.length) text = `${prefix}: ${parts.join(' · ')}${noData ? ` · ${noData} sin datos` : ''}`;
   else text = `${prefix}: ${enabled.length} cuenta${enabled.length === 1 ? '' : 's'} · ${noData} sin datos`;
   return { text, tooltip: (isDemo ? 'DATOS SIMULADOS (modo demo)\n' : '') + (tips.join('\n') || 'Sin perfiles') };
+}
+
+export const CLASS_LABEL: Record<string, string> = {
+  recomendable: 'Recomendable',
+  'bajo-reserva': 'Bajo la reserva',
+  agotada: 'Agotada',
+  'sin-datos': 'Sin datos',
+  'sin-porcentaje': 'Sin porcentaje',
+  deshabilitada: 'Deshabilitada',
+  'no-compatible': 'No compatible',
+};
+
+/**
+ * Antigravity publishes no quota %, but its logs prove the last run finished (so there WAS quota then) and its
+ * conversations give the tokens. Says what is known instead of «sin dato oficial». Never makes the account
+ * eligible: the recommender still does not score it. Null when there is no such proof.
+ */
+function usageWithoutPercent(p: ExecutionProfile, view: ProfileView, quotas: QuotaSnapshot[], tz: string, now: Date): string | null {
+  if (p.provider !== 'gemini') return null;
+  const ok = quotas
+    .filter((q) => q.accountId === p.id && q.source === 'antigravity-log' && q.status === 'unavailable')
+    .map((q) => q.observedAt)
+    .sort()
+    .pop();
+  if (!ok && view.tokens24h === 0) return null;
+  const parts = ['Antigravity no publica el %'];
+  if (ok) parts.push(`la última ejecución (${whenLocal(ok, tz, now)}) terminó bien`);
+  if (view.tokens24h > 0) parts.push(`${fmtTokens(view.tokens24h)} tokens en 24 h`);
+  return parts.join('; ');
+}
+
+function whenLocal(iso: string, tz: string, now: Date): string {
+  const sameDay = formatInZone(iso, tz).slice(0, 10) === formatInZone(now.toISOString(), tz).slice(0, 10);
+  return sameDay ? 'hoy ' + formatInZone(iso, tz, false) : formatInZone(iso, tz);
+}
+
+function fmtTokens(n: number): string {
+  return n >= 1e6 ? (n / 1e6).toFixed(1) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : String(n);
 }

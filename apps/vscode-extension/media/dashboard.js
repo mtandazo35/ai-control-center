@@ -319,7 +319,7 @@
       h('h2', null, 'Comparación por capacidad documentada'),
       table(['Cuenta', 'Clasificación', 'Motivo'], vm.recommendation.ranked
         .filter((r) => filterProvider === 'all' || r.id.startsWith(filterProvider) || (vm.profiles.find((p) => p.id === r.id) || {}).provider === filterProvider)
-        .map((r) => [r.title, r.classification, r.rationale])),
+        .map((r) => [r.title, r.classLabel || r.classification, r.rationale])),
     ]));
 
     nodes.push(h('section', null, [

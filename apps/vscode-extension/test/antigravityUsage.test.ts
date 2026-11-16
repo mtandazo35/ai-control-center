@@ -130,6 +130,31 @@ describe('Antigravity conversation stores: tokens per model call (numbers only)'
     expect(g.sessionContext).toMatchObject({ percent: 25 });
     // Gemini now has tokens: it joins the token chart.
     expect(vm.series.accounts.some((a) => a.id === 'gemini-antigravity')).toBe(true);
+
+    // Comparison table: says what is known instead of «sin datos», but the account is still never scored as free.
+    const row = vm.recommendation.ranked.find((r) => r.id === 'gemini-antigravity')!;
+    expect(row).toMatchObject({ classification: 'sin-porcentaje', classLabel: 'Sin porcentaje', score: null });
+    expect(row.rationale).toBe('Antigravity no publica el %; 15 k tokens en 24 h');
+
+    // With a finished run in the logs, the rationale also says when (local time, «hoy» on the same day).
+    s.insertQuota('m1', {
+      accountId: 'gemini-antigravity',
+      limitId: 'agy:individual',
+      limitLabel: 'cuota individual',
+      windowMinutes: null,
+      usedPercent: null,
+      remainingPercent: null,
+      resetsAt: null,
+      source: 'antigravity-log',
+      confidence: 'medium',
+      observedAt: '2030-01-15T12:01:00.000Z',
+      status: 'unavailable',
+      extra: null,
+    });
+    const vm2 = buildViewModel(gatherInput(s, '24h', now), settings, '24h', now);
+    expect(vm2.recommendation.ranked.find((r) => r.id === 'gemini-antigravity')!.rationale).toBe(
+      'Antigravity no publica el %; la última ejecución (hoy 07:01) terminó bien; 15 k tokens en 24 h',
+    );
   });
 
   it('old stores are not opened; a store that is not SQLite counts as an error and is retried', () => {

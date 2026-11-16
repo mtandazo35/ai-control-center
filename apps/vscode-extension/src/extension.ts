@@ -30,7 +30,7 @@ import { label, recommend } from './core/recommend';
 import { Store } from './core/store';
 import type { ExecutionProfile, Provider, Settings } from './core/types';
 import { exists, redact, slug } from './core/util';
-import { buildViewModel, gatherInput, type Range, type ViewModel } from './core/viewmodel';
+import { buildViewModel, CLASS_LABEL, gatherInput, type Range, type ViewModel } from './core/viewmodel';
 import { DashboardPanel } from './ui/dashboard';
 import { AccountsTree, AlertsTree } from './ui/tree';
 import { isLoopback, loadOrCreateToken, startWebServer, type WebHandle } from './web';
@@ -378,7 +378,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     const pick = await vscode.window.showQuickPick(
       r.ranked.map((c) => ({
         label: `${c === r.selected ? '$(star-full) ' : c.eligible ? '' : '$(circle-slash) '}${label(c.profile)}`,
-        description: c.classification,
+        description: CLASS_LABEL[c.classification] ?? c.classification,
         detail: c.rationale,
         c,
       })),
