@@ -271,6 +271,29 @@ export class Store {
    * Token time series bucketed by hour or day, per account, from the account's chosen token source.
    * Keeps transcripts and OTel apart so the same request is never counted twice.
    */
+  /** Tokens and calls per account and model since a time (same source rule as tokenSeries). */
+  modelUsage(sinceIso: string): { accountId: string; model: string | null; input: number; output: number; cached: number; calls: number; sessions: number }[] {
+    const rows = this.db
+      .prepare(
+        `SELECT t.account_id, t.model, SUM(t.input_tokens) i, SUM(t.output_tokens) o, SUM(t.cached_tokens) c, COUNT(*) n, COUNT(DISTINCT t.session_id) s
+         FROM token_usage_events t JOIN provider_accounts a ON a.id = t.account_id
+         WHERE t.timestamp >= ? AND (
+           (a.token_source = 'otel' AND t.source = 'claude-otel') OR
+           (a.token_source <> 'otel' AND t.source <> 'claude-otel'))
+         GROUP BY t.account_id, t.model ORDER BY (SUM(t.input_tokens) + SUM(t.output_tokens)) DESC`,
+      )
+      .all(sinceIso) as Row[];
+    return rows.map((r) => ({
+      accountId: String(r.account_id),
+      model: str(r.model),
+      input: Number(r.i),
+      output: Number(r.o),
+      cached: Number(r.c),
+      calls: Number(r.n),
+      sessions: Number(r.s),
+    }));
+  }
+
   tokenSeries(
     sinceIso: string,
     bucket: 'hour' | 'day',

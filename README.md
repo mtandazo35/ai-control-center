@@ -40,7 +40,11 @@ que te quedes sin cuota y recomienda qué cuenta usar para la siguiente tarea.
   - Claude: sesión de 5 h, semanal y semanal por modelo.
   - Codex: sesión de 5 h, semanal y cualquier otro bucket que devuelva.
   - Antigravity: cuota individual.
-- **Consumo medido por la app**: tokens de las últimas 24 h, sesiones activas y contexto de la sesión actual (Claude).
+- **Consumo medido por la app**: tokens de las últimas 24 h (con el desglose entrada, caché y salida al pasar el
+  mouse), sesiones activas y contexto de la sesión actual (Claude) o de la última ejecución (Antigravity).
+  - Antigravity: tokens y contexto de cada llamada, leídos de sus propias conversaciones locales (solo las cifras y el
+    nombre del modelo, nunca el contenido), y una línea por modelo usado en 24 h. El porcentaje de cuota sigue sin
+    publicarse: solo se sabe cuándo se agota.
 - La cuenta en uso (correo enmascarado), el plan y el estado de la sesión.
 
 **Además:**
@@ -50,7 +54,7 @@ que te quedes sin cuota y recomienda qué cuenta usar para la siguiente tarea.
 - **Comparación** de todas las cuentas por capacidad restante.
 - **Gráficos de 24 h, 7 días y 30 días**:
   - **tokens** por cuenta;
-  - **actividad** por cuenta (sesiones y ejecuciones), que incluye Antigravity aunque no registre tokens.
+  - **actividad** por cuenta (sesiones y ejecuciones).
 - **Alertas** al 70, 85 y 95 % de cada ventana, aviso de reinicio próximo, sesión caducada, dato desactualizado y
   recolector caído.
 - **Historial** de sesiones (proyecto, modelo, duración y tokens) y de costes estimados.
@@ -69,7 +73,7 @@ Todas las horas se muestran en **hora de Ecuador** (America/Guayaquil, configura
  ┌──────────────────────────────────────────────────────────────────────────────┐
  │  Claude Code ──(mod «ai-control-center-feed»)──► inbox\claude-mod-*.json     │
  │  Codex ────────(codex app-server, rollouts)────┐                              │
- │  Antigravity ──(sus registros locales)─────────┤                              │
+ │  Antigravity ──(registros y conversaciones)────┤                              │
  │                                                ▼                              │
  │                         agente  ──►  SQLite (%LOCALAPPDATA%\ai-control-center)│
  │                                            │                                  │

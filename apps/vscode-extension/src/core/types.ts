@@ -19,6 +19,7 @@ export type DataSource =
   | 'claude-otel'
   | 'claude-auth-status'
   | 'antigravity-log'
+  | 'antigravity-conversation'
   | 'claude-usage-cache'
   | 'claude-mod'
   | 'claude-activity-estimate'

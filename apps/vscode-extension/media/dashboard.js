@@ -39,6 +39,7 @@
     'claude-mod': 'Claude Code (mod oficial, en vivo)',
     'claude-usage-cache': 'caché de uso de Claude Code (/usage; no documentada)',
     'antigravity-log': 'registros locales de Antigravity (aviso del servidor)',
+    'antigravity-conversation': 'conversaciones locales de Antigravity',
     manual: 'registro manual',
   };
   const VERIF = { verified: 'sesión verificada', observed: 'sesión vista en registros', failed: 'sesión con error', pending: 'pendiente', unsupported: 'sin conector' };
@@ -97,13 +98,20 @@
     const vOk = p.verification === 'verified' || p.verification === 'observed';
     const gem = p.provider === 'gemini';
     const ctx = p.sessionContext && p.sessionContext.percent !== null ? p.sessionContext : null;
+    const det = p.tokens24hDetail || { input: 0, cached: 0, output: 0 };
+    const tokTitle = 'Entrada nueva ' + fmtTok(det.input) + ' · salida ' + fmtTok(det.output) + ' · entrada en caché ' + fmtTok(det.cached) + ' (no suma)';
+    // Antigravity: tokens come from its conversation stores; if none decoded (older agy, other format) say so.
+    const gemTok = gem && !(p.models24h || []).length;
     const stats = [
-      gem ? stat(String(p.runs24h), 'ejecuciones en 24 h') : stat(fmtTok(p.tokens24h), 'tokens en 24 h'),
-      gem ? stat('—', 'tokens no registrados', 'Antigravity no registra tokens en sus archivos locales') : null,
+      gemTok
+        ? stat('—', 'tokens en 24 h', 'No se pudieron leer tokens de las conversaciones locales de Antigravity')
+        : stat(fmtTok(p.tokens24h), 'tokens en 24 h', tokTitle),
       // Always four cells per card (2 × 2), so every card's grid has the same shape: a missing figure shows «—».
-      p.provider === 'claude' ? stat(ctx ? ctx.percent + ' %' : '—', 'contexto de la sesión', ctx ? 'Medido ' + ctx.age : 'Sin medida reciente de la sesión') : null,
+      p.provider === 'claude' || gem ? stat(ctx ? ctx.percent + ' %' : '—', gem ? 'contexto de la última ejecución' : 'contexto de la sesión', ctx ? 'Medido ' + ctx.age : 'Sin medida reciente') : null,
       p.provider === 'codex' ? stat(ex && ex.credits ? (ex.credits.unlimited ? 'ilimitados' : String(ex.credits.balance ?? '—')) : '—', 'créditos') : null,
-      stat(String(p.activeSessions), p.activeSessions === 1 ? 'sesión activa' : 'sesiones activas'),
+      gem
+        ? stat(String(p.runs24h), p.runs24h === 1 ? 'ejecución en 24 h' : 'ejecuciones en 24 h')
+        : stat(String(p.activeSessions), p.activeSessions === 1 ? 'sesión activa' : 'sesiones activas'),
       stat(p.lastDataAge ? p.lastDataAge.replace(/^hace /, '') : '—', p.lastDataAge ? 'desde el último dato' : 'sin datos aún', p.lastDataLocal),
     ].filter(Boolean);
     return h('section', { class: 'card ' + p.provider + (p.enabled ? '' : ' disabled'), 'aria-label': p.title }, [
@@ -136,6 +144,13 @@
                 : h('span', null, p.connectorError || 'Sin respuesta del conector.'),
           ]),
       warnings.length ? h('div', { class: 'warn-line' }, warnings.join('. ')) : null,
+      gem && (p.models24h || []).length
+        ? h('ul', { class: 'models', 'aria-label': 'Uso por modelo en 24 h' }, p.models24h.map((m) =>
+            h('li', null, [
+              h('span', { class: 'model-name', title: m.model }, m.model),
+              h('span', { class: 'model-use' }, (m.sessions === 1 ? '1 ejecución' : m.sessions + ' ejecuciones') + ' · ' + fmtTok(m.tokens) + ' tokens'),
+            ])))
+        : null,
       h('div', { class: 'stats', 'aria-label': 'Medido en este PC' }, stats),
       p.connectorOk === false ? h('div', { class: 'error' }, 'Recolector: ' + (p.connectorError || 'error')) : null,
     ]);
@@ -224,7 +239,6 @@
       value: (acc, i) => acc.runs[i],
       fmt: (v) => String(v),
       tip: (acc, i, v) => v + (v === 1 ? ' sesión o ejecución' : ' sesiones o ejecuciones') + ' · ' + acc.minutes[i] + ' min de actividad',
-      legendNote: (a) => (a.provider === 'gemini' ? ' (no registra tokens)' : ''),
     });
   }
 

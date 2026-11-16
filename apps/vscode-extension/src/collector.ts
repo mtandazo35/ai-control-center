@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { defaultClaudeConfigDir, ingestStatuslineInbox, readClaudeAuth } from './adapters/claude';
 import { codexRateLimitsToSnapshots, readCodexAccount, type CodexReadResult } from './adapters/codexAppServer';
 import { ingestAntigravityLogs } from './adapters/antigravity';
+import { ingestAntigravityConversations } from './adapters/antigravityUsage';
 import { ingestClaudeModInbox } from './adapters/claudeMod';
 import { estimateClaudeSession, ingestClaudeUsageCache } from './adapters/claudeUsage';
 import { defaultCodexHome, type GeminiProduct } from './adapters/detect';
@@ -210,6 +211,8 @@ export class Collector {
           // No quota interface: only the server's exhaustion message and the runs recorded in Antigravity's own logs.
           const r = ingestAntigravityLogs(this.store, p, this.mid);
           ingested[`${p.id}:runs`] = r.runs;
+          // Token counts per model call, from Antigravity's own conversation stores (read-only, numbers only).
+          ingested[`${p.id}:calls`] = ingestAntigravityConversations(this.store, p).calls;
           // A run in Antigravity's own logs proves a signed-in session (no identity is read).
           const last = this.store.sessions('1970-01-01').find((x) => x.accountId === p.id);
           if (last && p.verification !== 'observed') {

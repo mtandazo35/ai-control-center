@@ -50,6 +50,10 @@ export interface ProfileView {
   sessionContext: { percent: number | null; at: string; age: string } | null;
   /** Runs/sessions seen in the last 24 h (used for providers that record no tokens, e.g. Antigravity). */
   runs24h: number;
+  /** Breakdown of tokens24h: fresh input, input served from cache (not counted in tokens24h) and output. */
+  tokens24hDetail: { input: number; cached: number; output: number };
+  /** Usage per model in the last 24 h, largest first. */
+  models24h: { model: string; calls: number; sessions: number; tokens: number }[];
   activeSessions: number;
   lastDataLocal: string;
   /** «hace 3 min», or null when the account has no data yet. */
@@ -112,6 +116,8 @@ export interface BuildInput {
   sessionSeries: ReturnType<Store['sessionSeries']>;
   officialDaily: Record<string, { day: string; tokens: number }[]>;
   tokens24h: Record<string, number>;
+  tokens24hDetail?: Record<string, { input: number; cached: number; output: number }>;
+  models24h?: Record<string, { model: string; calls: number; sessions: number; tokens: number }[]>;
   sessionContext: Record<string, { percent: number | null; at: string }>;
   /** Display-zone offset used for the day buckets (minutes). */
   offsetMinutes: number;
@@ -125,12 +131,19 @@ export function gatherInput(store: Store, range: Range, now: Date, timeZone = 'A
   const officialDaily: BuildInput['officialDaily'] = {};
   for (const p of profiles) if (p.provider === 'codex') officialDaily[p.id] = store.dailyUsage(p.id, day0);
   const tokens24h: Record<string, number> = {};
-  for (const r of store.tokenSeries(new Date(now.getTime() - 86400000).toISOString(), 'hour')) {
+  const tokens24hDetail: NonNullable<BuildInput['tokens24hDetail']> = {};
+  const models24h: NonNullable<BuildInput['models24h']> = {};
+  for (const r of store.modelUsage(new Date(now.getTime() - 86400000).toISOString())) {
     tokens24h[r.accountId] = (tokens24h[r.accountId] ?? 0) + r.input + r.output;
+    const d = (tokens24hDetail[r.accountId] ??= { input: 0, cached: 0, output: 0 });
+    d.input += r.input;
+    d.cached += r.cached;
+    d.output += r.output;
+    (models24h[r.accountId] ??= []).push({ model: r.model ?? 'modelo desconocido', calls: r.calls, sessions: r.sessions, tokens: r.input + r.output });
   }
   const sessionContext: BuildInput['sessionContext'] = {};
   for (const p of profiles) {
-    const raw = p.provider === 'claude' ? store.getSetting(`claude-context:${p.id}`) : null;
+    const raw = p.provider === 'claude' || p.provider === 'gemini' ? store.getSetting(`${p.provider}-context:${p.id}`) : null;
     if (raw) {
       try {
         const c = JSON.parse(raw) as { percent: number | null; at: string };
@@ -158,6 +171,8 @@ export function gatherInput(store: Store, range: Range, now: Date, timeZone = 'A
     offsetMinutes,
     officialDaily,
     tokens24h,
+    tokens24hDetail,
+    models24h,
     sessionContext,
   };
 }
@@ -233,6 +248,8 @@ export function buildViewModel(input: BuildInput, settings: Settings, range: Ran
       connectorError: col?.error ?? null,
       tokens24h: input.tokens24h[p.id] ?? 0,
       runs24h: runsByAcc[p.id] ?? 0,
+      tokens24hDetail: input.tokens24hDetail?.[p.id] ?? { input: 0, cached: 0, output: 0 },
+      models24h: input.models24h?.[p.id] ?? [],
       sessionContext: input.sessionContext[p.id] ? { ...input.sessionContext[p.id], age: relative(input.sessionContext[p.id].at, now) } : null,
       activeSessions: activeByAcc[p.id] ?? 0,
       lastDataLocal: last ? `${formatInZone(last, tz)} (${relative(last, now)})` : 'sin datos',
