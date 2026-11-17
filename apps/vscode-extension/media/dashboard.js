@@ -95,6 +95,15 @@
   /** One figure of the «measured on this PC» grid: value on top, what it is below. */
   const stat = (value, label, title) => h('div', { class: 'stat', title: title || null }, [h('strong', null, value), h('span', null, label)]);
 
+  /** Codex credits: bought apart from the plan (Plus/Pro don't include them). */
+  function codexCredits(c) {
+    const tip = 'Créditos comprados aparte del plan; el uso incluido en el plan no los gasta.';
+    if (c && c.unlimited) return stat('Ilimitados', 'créditos extra', tip);
+    const n = c && c.balance !== null && c.balance !== undefined ? Number(c.balance) : NaN;
+    if (Number.isFinite(n) && n > 0) return stat(String(c.balance), 'créditos extra', tip);
+    return stat('Ninguno', 'crédito extra comprado', c ? tip : 'Codex no informó créditos');
+  }
+
   function card(p) {
     const warnings = [];
     const ex = (p.buckets.find((b) => b.extra) || {}).extra;
@@ -119,11 +128,12 @@
         : stat(fmtTok(p.tokens24h), 'tokens en 24 h', tokTitle),
       // Always four cells per card (2 × 2), so every card's grid has the same shape: a missing figure shows «—».
       p.provider === 'claude' || gem ? stat(ctx ? ctx.percent + ' %' : '—', gem ? 'contexto de la última ejecución' : 'contexto de la sesión', ctx ? 'Medido ' + ctx.age : 'Sin medida reciente') : null,
-      p.provider === 'codex' ? stat(ex && ex.credits ? (ex.credits.unlimited ? 'ilimitados' : String(ex.credits.balance ?? '—')) : '—', 'créditos') : null,
+      // Credits are bought apart from the plan: «0» read as a problem, so no balance says «Ninguno».
+      p.provider === 'codex' ? codexCredits(ex && ex.credits) : null,
       gem
         ? stat(String(p.runs24h), p.runs24h === 1 ? 'ejecución en 24 h' : 'ejecuciones en 24 h')
         : stat(String(p.activeSessions), p.activeSessions === 1 ? 'sesión activa' : 'sesiones activas'),
-      stat(p.lastDataAge ? p.lastDataAge.replace(/^hace /, '') : '—', p.lastDataAge ? 'desde el último dato' : 'sin datos aún', p.lastDataLocal),
+      stat(p.lastDataAge ? p.lastDataAge.replace(/^hace /, '').replace(/^menos de /, '< ') : '—', p.lastDataAge ? 'desde el último dato' : 'sin datos aún', p.lastDataLocal),
     ].filter(Boolean);
     return h('section', { class: 'card ' + p.provider + (p.enabled ? '' : ' disabled'), 'aria-label': p.title }, [
       h('header', null, [
