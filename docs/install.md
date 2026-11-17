@@ -58,7 +58,9 @@ con `Claude: revertir telemetría…`.
 
 `Instalar agente residente` copia `agent.js` en `%LOCALAPPDATA%\ai-control-center\bin\` y añade
 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\AIControlCenterAgent`, que lo lanza oculto con `wscript`.
-Usa la misma base y el mismo lease que la extensión.
+Usa la misma base y el mismo lease que la extensión. Si un proceso que tenía el lease ya no existe (cerrado a la
+fuerza), el siguiente lo toma al momento en vez de esperar a que caduque. El agente revisa cada minuto si su
+`agent.js` cambió y, si es así, arranca la versión nueva y sale; la extensión renueva la copia instalada al activarse.
 Manual (cualquier SO): `node dist/agent.js --data-dir <carpeta> --interval 5`. Para una pasada única: `--once`.
 
 ## Panel web local (navegador)

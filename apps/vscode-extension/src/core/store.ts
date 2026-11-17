@@ -471,11 +471,13 @@ export class Store {
   }
 
   /** Single-writer lease so several VS Code windows + the agent don't all poll the providers. */
-  tryLease(name: string, holder: string, now: Date, ttlMs: number): boolean {
+  // `isDead(holder)`: true when the holder's process is gone (killed without releasing): the lease is taken at once
+  // instead of waiting for it to expire.
+  tryLease(name: string, holder: string, now: Date, ttlMs: number, isDead?: (holder: string) => boolean): boolean {
     return this.tx(() => {
       const r = this.db.prepare('SELECT holder, expires_at FROM leases WHERE name = ?').get(name) as Row | undefined;
       const nowIso = now.toISOString();
-      if (r && String(r.holder) !== holder && String(r.expires_at) > nowIso) return false;
+      if (r && String(r.holder) !== holder && String(r.expires_at) > nowIso && !isDead?.(String(r.holder))) return false;
       const exp = new Date(now.getTime() + ttlMs).toISOString();
       this.db
         .prepare(

@@ -73,6 +73,8 @@ export interface ViewModel {
   };
   sessions: { title: string; project: string | null; model: string | null; startedLocal: string; lastSeenLocal: string; durationMin: number; active: boolean; tokens: number; source: string }[];
   alerts: (AlertRecord & { createdLocal: string })[];
+  /** Same account, kind and text (ignoring the «(último …)» time): one line with how many times and since when. */
+  alertGroups: { severity: AlertRecord['severity']; message: string; count: number; lastLocal: string; firstLocal: string; acknowledged: boolean }[];
   series: {
     buckets: string[];
     labels: string[];
@@ -166,7 +168,7 @@ export function gatherInput(store: Store, range: Range, now: Date, timeZone = 'A
   return {
     profiles,
     quotas: store.latestQuotas(),
-    alerts: store.alerts(50),
+    alerts: store.alerts(300),
     collectors,
     sessions: store.sessions(new Date(now.getTime() - 7 * 86400000).toISOString()),
     tokenSeries: store.tokenSeries(start, range === '24h' ? 'hour' : 'day', offsetMinutes),
@@ -324,6 +326,7 @@ export function buildViewModel(input: BuildInput, settings: Settings, range: Ran
     },
     sessions,
     alerts: input.alerts.map((a) => ({ ...a, createdLocal: formatInZone(a.createdAt, tz) })),
+    alertGroups: groupAlerts(input.alerts, tz),
     series: { buckets: axis, labels: labels.short, labelsLong: labels.long, activity, accounts },
     officialDaily: Object.entries(input.officialDaily).map(([id, days]) => ({ id, title: title(id), days })),
     costs: [...costMap.values()],
@@ -391,4 +394,25 @@ function whenLocal(iso: string, tz: string, now: Date): string {
 
 function fmtTokens(n: number): string {
   return n >= 1e6 ? (n / 1e6).toFixed(1) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : String(n);
+}
+
+/** Alerts come newest first; the group keeps the newest text and counts the repeats. */
+export function groupAlerts(alerts: AlertRecord[], tz: string): ViewModel['alertGroups'] {
+  const groups = new Map<string, ViewModel['alertGroups'][number] & { firstAt: string }>();
+  for (const a of alerts) {
+    const key = [a.accountId ?? '', a.kind, a.severity, a.message.replace(/\s*\(último [^)]*\)/, '')].join('|');
+    const g = groups.get(key);
+    if (!g) {
+      const local = formatInZone(a.createdAt, tz);
+      groups.set(key, { severity: a.severity, message: a.message, count: 1, lastLocal: local, firstLocal: local, firstAt: a.createdAt, acknowledged: a.acknowledged });
+    } else {
+      g.count++;
+      if (a.createdAt < g.firstAt) {
+        g.firstAt = a.createdAt;
+        g.firstLocal = formatInZone(a.createdAt, tz);
+      }
+      g.acknowledged = g.acknowledged && a.acknowledged;
+    }
+  }
+  return [...groups.values()].map(({ firstAt: _firstAt, ...g }) => g);
 }

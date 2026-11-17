@@ -161,6 +161,23 @@ export interface RunResult {
   ingested: Record<string, number>;
 }
 
+/**
+ * Holders are `agent-<pid>` or `ext-<pid>-<random>` (the database is local to this PC). True only when that process
+ * no longer exists (ESRCH): a live process, a permission error or an unknown holder format keep the lease.
+ */
+export function holderIsDead(holder: string): boolean {
+  const m = /^(?:agent|ext)-(\d+)/.exec(holder);
+  if (!m) return false;
+  const pid = Number(m[1]);
+  if (!pid || pid === process.pid) return false;
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (e) {
+    return (e as NodeJS.ErrnoException).code === 'ESRCH';
+  }
+}
+
 export class Collector {
   private runs = 0;
   private lastPrune = 0;
@@ -175,7 +192,7 @@ export class Collector {
 
   /** Lease so that several windows and the agent don't all hit the providers. */
   canPoll(now = new Date()): boolean {
-    return this.store.tryLease('collector', this.holder, now, this.cfg.pollMinutes * 2 * 60000);
+    return this.store.tryLease('collector', this.holder, now, this.cfg.pollMinutes * 2 * 60000, holderIsDead);
   }
 
   release(): void {

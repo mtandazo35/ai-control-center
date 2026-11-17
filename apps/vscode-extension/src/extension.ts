@@ -603,6 +603,19 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     if (pick) await vscode.env.clipboard.writeText(url);
   });
 
+  // An installed resident agent runs a copy of dist/agent.js: when the extension updates, refresh the copy
+  // (the agent sees its file change and restarts itself with the new version).
+  try {
+    const installed = path.join(dataDir(), 'bin', 'agent.js');
+    const bundled = path.join(ctx.extensionPath, 'dist', 'agent.js');
+    if (exists(installed) && !fs.readFileSync(installed).equals(fs.readFileSync(bundled))) {
+      fs.copyFileSync(bundled, installed);
+      st.audit('agent-update', installed, new Date().toISOString());
+    }
+  } catch {
+    /* no installed agent, or the copy is in use: the next activation tries again */
+  }
+
   reg('aiControlCenter.installAgent', async () => {
     if (process.platform !== 'win32') {
       void vscode.window.showInformationMessage('El instalador del agente residente está implementado solo para Windows. En macOS/Linux ejecútalo a mano: node dist/agent.js --data-dir <carpeta> (ver docs/install.md).');

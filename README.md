@@ -172,7 +172,8 @@ estado.
 Desde VS Code, en la paleta de comandos: **«AI Control Center: Instalar agente residente»**. El agente queda en
 `%LOCALAPPDATA%\ai-control-center\bin\agent.js` y se registra en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 (clave `AIControlCenterAgent`), oculto y con el panel web incluido. Se quita con **«AI Control Center: Desinstalar
-monitoreo»**.
+monitoreo»**. Cuando la extensión se actualiza, renueva esa copia al abrir VS Code, y el agente, al ver su archivo
+cambiado, se reinicia solo con la versión nueva en menos de un minuto.
 
 Sin la extensión, puedes dejar el paso 3 en una ventana abierta o crear una tarea programada que ejecute
 `node <ruta>\dist\agent.js --web` al iniciar sesión.
@@ -368,8 +369,8 @@ npm install
 npm run build
 ```
 
-Después reinicia el agente. Si usas la extensión, reinstala el `.vsix` de `release\`. Si usas el agente residente,
-vuelve a ejecutar «Instalar agente residente».
+Si usas la extensión, reinstala el `.vsix` de `release\`: al abrir VS Code renueva la copia del agente residente y este
+se reinicia solo. Un agente lanzado a mano con `node distgent.js` también se reinicia solo al ver el `agent.js` nuevo.
 
 **Desinstalar:**
 

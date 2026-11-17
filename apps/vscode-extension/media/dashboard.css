@@ -280,7 +280,8 @@ td.r, th.r { text-align: right; }
 .alerts { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
 .alerts li { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: var(--r-sm); padding: 8px 12px; font-size: 0.92em; }
 .alerts li.warning { border-left-color: var(--warn); }
-.alerts li.error { border-left-color: var(--crit); }
+/* The global .error (collector error box) must not leak into alert rows: same margin, size and colour as the rest. */
+.alerts li.error { border-left-color: var(--crit); margin-top: 0; font-size: 0.92em; color: inherit; }
 .alerts li.ack { opacity: 0.6; }
 .alerts time { color: var(--muted); font-size: 0.86em; display: block; }
 

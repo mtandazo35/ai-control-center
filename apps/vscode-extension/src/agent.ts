@@ -4,6 +4,7 @@
  *                 [--web [--web-host 127.0.0.1] [--web-port 4320]]   local read-only web panel
  * Read-only towards the providers; writes only to its own SQLite database.
  */
+import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -47,7 +48,25 @@ async function main(): Promise<void> {
     'agent',
   );
   if (!once) fs.writeFileSync(path.join(dataDir, 'agent.pid'), String(process.pid));
+  // When its own file is replaced (extension update, rebuild), the agent starts the new version and leaves:
+  // the login entry keeps working and nobody has to kill it by hand.
+  const self = path.resolve(process.argv[1] ?? '');
+  const mtime = () => {
+    try {
+      return fs.statSync(self).mtimeMs;
+    } catch {
+      return 0;
+    }
+  };
+  const startedMtime = mtime();
   const tick = async () => {
+    if (!once && startedMtime && mtime() > startedMtime) {
+      log('nueva versión del agente: reiniciando');
+      collector.release();
+      store.close();
+      spawn(process.execPath, process.argv.slice(1), { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+      process.exit(0);
+    }
     try {
       if (once || collector.canPoll()) {
         const r = await collector.runOnce();
@@ -65,6 +84,10 @@ async function main(): Promise<void> {
     return;
   }
   setInterval(() => void tick(), interval * 60000);
+  // The new-version check runs every minute, not only on each collection.
+  if (interval > 1) setInterval(() => {
+    if (startedMtime && mtime() > startedMtime) void tick();
+  }, 60000);
   if (process.argv.includes('--web')) {
     const host = arg('--web-host', '127.0.0.1')!;
     const port = Number(arg('--web-port', '4320'));

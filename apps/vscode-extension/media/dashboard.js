@@ -386,7 +386,13 @@
       vm.alerts.length
         ? h('div', null, [
             WEB ? null : h('button', { onclick: () => vscode.postMessage({ type: 'ackAlerts' }) }, 'Marcar todas como vistas'),
-            h('ul', { class: 'alerts' }, vm.alerts.slice(0, 20).map((a) => h('li', { class: a.severity + (a.acknowledged ? ' ack' : '') }, [h('time', null, a.createdLocal), a.message]))),
+            // Repeats of the same alert are one line: «7 veces desde 16/11 12:05».
+            h('ul', { class: 'alerts' }, (vm.alertGroups || vm.alerts.map((a) => ({ ...a, count: 1, lastLocal: a.createdLocal, firstLocal: a.createdLocal })))
+              .slice(0, 20)
+              .map((g) => h('li', { class: g.severity + (g.acknowledged ? ' ack' : '') }, [
+                h('time', null, g.count > 1 ? g.lastLocal + ' · ' + g.count + ' veces desde ' + g.firstLocal : g.lastLocal),
+                g.message,
+              ]))),
           ])
         : h('p', { class: 'muted' }, 'Sin alertas.'),
     ]));
