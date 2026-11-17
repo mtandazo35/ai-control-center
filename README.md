@@ -370,7 +370,7 @@ npm run build
 ```
 
 Si usas la extensión, reinstala el `.vsix` de `release\`: al abrir VS Code renueva la copia del agente residente y este
-se reinicia solo. Un agente lanzado a mano con `node distgent.js` también se reinicia solo al ver el `agent.js` nuevo.
+se reinicia solo. Un agente lanzado a mano con `node dist\agent.js` también se reinicia solo al ver el `agent.js` nuevo.
 
 **Desinstalar:**
 
