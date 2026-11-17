@@ -84,14 +84,15 @@ export function recommend(
     if (opts.providers && opts.providers.length && !opts.providers.includes(p.provider)) {
       return { ...base, classification: 'no-compatible', rationale: 'proveedor no apto para esta tarea' };
     }
-    const live = buckets.filter((b) => b.state === 'live');
+    // Buckets marked `extra.scoring === false` (e.g. Claude/GPT and Argon inside Antigravity) are shown, not scored.
+    const live = buckets.filter((b) => b.state === 'live' && b.snapshot.extra?.scoring !== false);
     if (live.length === 0) {
       const why = buckets.length === 0 ? 'sin cuota oficial disponible' : buckets.map((b) => `${b.snapshot.limitLabel}: ${b.reason}`).join('; ');
       return { ...base, classification: 'sin-datos', rationale: why };
     }
     const bottleneck = live.reduce((a, b) => ((b.remaining ?? 0) < (a.remaining ?? 0) ? b : a));
     const rem = bottleneck.remaining ?? 0;
-    const partial = buckets.some((b) => b.state !== 'live');
+    const partial = buckets.some((b) => b.state !== 'live' && b.snapshot.extra?.scoring !== false);
     if (rem <= 0) {
       return {
         ...base,

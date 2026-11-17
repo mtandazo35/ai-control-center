@@ -172,7 +172,13 @@ export class Store {
       seen.add(k);
       out.push(rowToQuota(r));
     }
-    return out;
+    // Antigravity: once the official /usage reading exists, the log-based «cuota individual» (a run worked / the
+    // server said exhausted) only stays when it is newer — e.g. an exhaustion seen after the last /usage reading.
+    const usageAt = new Map<string, string>();
+    for (const q of out) {
+      if (q.source === 'antigravity-usage' && (usageAt.get(q.accountId) ?? '') < q.observedAt) usageAt.set(q.accountId, q.observedAt);
+    }
+    return out.filter((q) => !(q.limitId === 'agy:individual' && usageAt.has(q.accountId) && q.observedAt <= usageAt.get(q.accountId)!));
   }
 
   quotaHistory(accountId: string, sinceIso: string): QuotaSnapshot[] {

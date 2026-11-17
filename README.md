@@ -39,12 +39,12 @@ que te quedes sin cuota y recomienda qué cuenta usar para la siguiente tarea.
   el 95 %, y la hora de reinicio en tu zona («Se reinicia a las 14:40», «Se reinicia jue 19/11 a las 03:00»).
   - Claude: sesión de 5 h, semanal y semanal por modelo.
   - Codex: sesión de 5 h, semanal y cualquier otro bucket que devuelva.
-  - Antigravity: cuota individual.
+  - Antigravity: sesión de 5 h y semanal de cada grupo de modelos (Gemini; Claude y GPT; Argon), leídas con el comando
+    oficial `agy -p "/usage"`, que no inicia un turno ni gasta cuota. Solo el grupo Gemini decide la recomendación.
 - **Consumo medido por la app**: tokens de las últimas 24 h (con el desglose entrada, caché y salida al pasar el
   mouse), sesiones activas y contexto de la sesión actual (Claude) o de la última ejecución (Antigravity).
   - Antigravity: tokens y contexto de cada llamada, leídos de sus propias conversaciones locales (solo las cifras y el
-    nombre del modelo, nunca el contenido), y una línea por modelo usado en 24 h. El porcentaje de cuota sigue sin
-    publicarse: solo se sabe cuándo se agota.
+    nombre del modelo, nunca el contenido), y una línea por modelo usado en 24 h.
 - La cuenta en uso (correo enmascarado), el plan y el estado de la sesión.
 
 **Además:**
@@ -73,7 +73,7 @@ Todas las horas se muestran en **hora de Ecuador** (America/Guayaquil, configura
  ┌──────────────────────────────────────────────────────────────────────────────┐
  │  Claude Code ──(mod «ai-control-center-feed»)──► inbox\claude-mod-*.json     │
  │  Codex ────────(codex app-server, rollouts)────┐                              │
- │  Antigravity ──(registros y conversaciones)────┤                              │
+ │  Antigravity ──(agy /usage, conversaciones)────┤                              │
  │                                                ▼                              │
  │                         agente  ──►  SQLite (%LOCALAPPDATA%\ai-control-center)│
  │                                            │                                  │
@@ -240,7 +240,7 @@ datos oficiales vigentes. Haz clic para abrir el dashboard.
 |---|---|---|---|
 | **Claude Code** | **Mod `ai-control-center-feed`**: evento oficial `session.measure` (5 h y semanal). Respaldos: la caché de `/usage` que guarda Claude Code, los avisos «You've hit your limit · resets …» y una estimación de la hora de reinicio de la ventana de 5 h a partir de tu actividad | transcripts locales (solo los contadores `usage`); OTel opcional | en cada respuesta de Claude |
 | **Codex** | `codex app-server` → `account/rateLimits/read`, con tu sesión, sin refrescar el token. Todos los buckets | rollouts locales (`token_count`) y `account/usage/read` | cada 5 min |
-| **Antigravity** (Gemini) | no publica el porcentaje; de sus registros locales se lee el aviso del servidor «Individual quota reached · Resets in …»: **agotada hasta tal hora** | ejecuciones, modelo y minutos de actividad (no registra tokens) | cada 5 min |
+| **Antigravity** (Gemini) | `agy -p "/usage" --output-format json`: porcentaje restante y reinicio de la sesión de 5 h y la semanal de cada grupo de modelos (sin turno, sin gastar cuota). Si falla, queda el aviso del servidor en sus registros («Individual quota reached · Resets in …») | tokens y contexto por llamada (conversaciones locales), ejecuciones y minutos de actividad | cada 5 min |
 
 Cada cifra lleva su **fuente**, su **hora de observación** y su **fiabilidad**. «Ver origen del dato» las muestra. Una
 cuota con más de 30 minutos se marca como «dato hace X» y no cuenta para la recomendación.
@@ -350,6 +350,7 @@ Más detalle en [`docs/privacy.md`](docs/privacy.md).
 | «Falta el token» / error 401 | Abre la URL de `web-url.txt` una vez para crear la cookie. |
 | Codex con error o «sin sesión» | Ejecuta `codex login`. Comprueba que `codex app-server --help` funciona desde PowerShell. |
 | Gemini «Cuota individual 100 %» | Antigravity avisó que la cuota se agotó. La tarjeta muestra la hora de reinicio que dio el servidor. |
+| Gemini sin barras de 5 h y semanal | `agy -p "/usage" --output-format json` falló o agy no está en `~/.gemini/bin` ni en el PATH. Pruébalo en PowerShell (en Git Bash, `/usage` se convierte en una ruta: usa `MSYS_NO_PATHCONV=1`). Ruta propia: variable `AGY_PATH`. |
 | Gemini «plan desconocido» | Antigravity no informa el plan. Decláralo en «Editar perfil → Plan declarado». |
 | Horas que no cuadran | Revisa `aiControlCenter.timeZone`. El agente usa America/Guayaquil. |
 

@@ -20,7 +20,7 @@ usar para la siguiente tarea. No cambia de cuenta por su cuenta, no pide credenc
 |---|---|---|
 | Codex | `codex app-server` → `account/rateLimits/read` (todos los buckets), con la sesión que ya tienes | `CODEX_HOME/sessions/**/rollout-*.jsonl` (solo contadores) + `account/usage/read` |
 | Claude Code | `rate_limits` del JSON de **statusLine**, solo si habilitas la captura (opcional, con respaldo y reversible) | `~/.claude/projects/**/*.jsonl` (solo `message.usage`) u OpenTelemetry local (opcional) |
-| Gemini / Antigravity | **No disponible**: el producto instalado no expone ninguna interfaz oficial de cuota; solo se detecta el aviso de cuota agotada en sus registros | `~/.gemini/antigravity-cli/conversations/*.db` (solo los contadores de tokens, el contexto y el modelo de cada llamada) |
+| Gemini / Antigravity | `agy -p "/usage" --output-format json` (comando oficial de solo lectura: sin turno ni gasto de cuota) → sesión de 5 h y semanal de cada grupo de modelos; respaldo: el aviso de cuota agotada en sus registros | `~/.gemini/antigravity-cli/conversations/*.db` (solo los contadores de tokens, el contexto y el modelo de cada llamada) |
 
 Una cuenta sin cuota oficial aparece como «No disponible · solo consumo local» y nunca se puntúa como libre.
 

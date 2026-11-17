@@ -20,6 +20,7 @@ export type DataSource =
   | 'claude-auth-status'
   | 'antigravity-log'
   | 'antigravity-conversation'
+  | 'antigravity-usage'
   | 'claude-usage-cache'
   | 'claude-mod'
   | 'claude-activity-estimate'

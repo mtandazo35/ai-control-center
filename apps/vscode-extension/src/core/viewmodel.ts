@@ -208,7 +208,8 @@ export function buildViewModel(input: BuildInput, settings: Settings, range: Ran
   });
 
   const profiles: ProfileView[] = input.profiles.map((p) => {
-    const qs = input.quotas.filter((q) => q.accountId === p.id);
+    const ord = (q: QuotaSnapshot) => (typeof q.extra?.order === 'number' ? q.extra.order : 0);
+    const qs = input.quotas.filter((q) => q.accountId === p.id).sort((a, b) => ord(a) - ord(b));
     const buckets = qs.map((q): BucketView => {
       const ev = evaluateBucket(q, now, settings.staleMinutes);
       return {

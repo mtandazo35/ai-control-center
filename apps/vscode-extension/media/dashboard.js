@@ -40,6 +40,7 @@
     'claude-usage-cache': 'caché de uso de Claude Code (/usage; no documentada)',
     'antigravity-log': 'registros locales de Antigravity (aviso del servidor)',
     'antigravity-conversation': 'conversaciones locales de Antigravity',
+    'antigravity-usage': 'Antigravity /usage (oficial)',
     manual: 'registro manual',
   };
   const VERIF = { verified: 'sesión verificada', observed: 'sesión vista en registros', failed: 'sesión con error', pending: 'pendiente', unsupported: 'sin conector' };

@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { defaultClaudeConfigDir, ingestStatuslineInbox, readClaudeAuth } from './adapters/claude';
 import { codexRateLimitsToSnapshots, readCodexAccount, type CodexReadResult } from './adapters/codexAppServer';
 import { ingestAntigravityLogs } from './adapters/antigravity';
+import { agyUsageToSnapshots, runAgyUsage } from './adapters/antigravityQuota';
 import { ingestAntigravityConversations } from './adapters/antigravityUsage';
 import { ingestClaudeModInbox } from './adapters/claudeMod';
 import { estimateClaudeSession, ingestClaudeUsageCache } from './adapters/claudeUsage';
@@ -220,7 +221,17 @@ export class Collector {
             p.verifiedAt = last.lastSeenAt;
             this.store.upsertProfile(p);
           }
-          statuses.push({ accountId: p.id, ok: true, error: null, at: now() });
+          // Official quota: `agy -p "/usage"` answers without an agent turn and spends no quota.
+          const u = await runAgyUsage();
+          let quotaError: string | null = u.ok ? null : u.error;
+          if (u.ok) {
+            const snaps = agyUsageToSnapshots(p.id, u.json, now());
+            let n = 0;
+            for (const s of snaps) if (this.store.insertQuota(this.mid, s)) n++;
+            ingested[`${p.id}:quota`] = n;
+            if (!snaps.length) quotaError = 'agy /usage: formato desconocido';
+          }
+          statuses.push({ accountId: p.id, ok: quotaError === null, error: quotaError, at: now() });
         } else if (p.provider === 'claude') {
           const s = await ingestClaudeTranscripts(this.store, p, this.mid);
           ingested[`${p.id}:transcripts`] = s.records;
