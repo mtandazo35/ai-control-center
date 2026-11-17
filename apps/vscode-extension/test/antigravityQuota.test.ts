@@ -69,6 +69,11 @@ describe('Antigravity official quota (agy -p "/usage" --output-format json)', ()
     expect(rec.ranked[0]).toMatchObject({ classification: 'recomendable', eligible: true });
     expect(rec.ranked[0].rationale).toBe('80 % restante en Gemini · 5 h (ventana más cargada)');
     expect(agyUsageToSnapshots(p.id, usage(0.9997796416282654), AT)[1]).toMatchObject({ usedPercent: 0.02, remainingPercent: 99.98 });
+    const fine = new Store(':memory:');
+    fine.upsertProfile(p);
+    for (const q of agyUsageToSnapshots(p.id, usage(0.9997796416282654), AT)) fine.insertQuota('m1', q);
+    // Two-decimal data reads as «99,5 %», never «99.53» or «100.0».
+    expect(recommend(fine.listProfiles(), fine.latestQuotas(), { now: NOW, staleMinutes: 30, reservePercent: 10 }).ranked[0].rationale).toBe('99,5 % restante en Gemini · 7 d (ventana más cargada)');
 
     const low = new Store(':memory:');
     low.upsertProfile(p);

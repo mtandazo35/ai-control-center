@@ -146,6 +146,8 @@ export function label(p: ExecutionProfile): string {
   return `${prov} · ${p.alias}`;
 }
 
+/** 99.97 → «100» (not «100.0»), 45.53 → «45,5»: one decimal at most, Spanish decimal comma, no trailing «,0». */
 function fmt(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : String(r).replace('.', ',');
 }
