@@ -3,7 +3,7 @@
   "displayName": "AI Control Center",
   "description": "Monitoreo de cuotas oficiales y consumo local de Claude Code, Codex y Gemini/Antigravity por cuenta, con alertas, historial y recomendación asistida.",
   "version": "0.1.0",
-  "publisher": "mtandazo35",
+  "publisher": "ai-control-center",
   "license": "MIT",
   "engines": {
     "vscode": "^1.101.0"
@@ -331,5 +331,5 @@
     "typescript-eslint": "^8.46.0",
     "vitest": "^3.2.4"
   },
-  "author": "mtandazo35"
+  "author": "AI Control Center contributors"
 }

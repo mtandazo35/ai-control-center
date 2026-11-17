@@ -13,7 +13,7 @@ exports.run = async function run() {
     if (!ok) throw new Error(`FALLÓ: ${name} ${detail ? JSON.stringify(detail) : ''}`);
   };
   try {
-    const ext = vscode.extensions.getExtension('mtandazo35.ai-control-center');
+    const ext = vscode.extensions.getExtension('ai-control-center.ai-control-center');
     check('extensión presente', !!ext);
     await ext.activate();
     check('extensión activa', ext.isActive);

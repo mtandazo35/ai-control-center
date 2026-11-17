@@ -424,4 +424,4 @@ Para depurar la extensión, abre `apps\vscode-extension` en VS Code y pulsa `F5`
 
 ## Licencia
 
-[MIT](LICENSE) © 2026 mtandazo35
+[MIT](LICENSE) © 2026 AI Control Center contributors
