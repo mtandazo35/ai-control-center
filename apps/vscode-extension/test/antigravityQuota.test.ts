@@ -42,8 +42,8 @@ describe('Antigravity official quota (agy -p "/usage" --output-format json)', ()
   it('maps every bucket: remaining fraction → %, window, reset time, group label, scoring only for Gemini', () => {
     const s = agyUsageToSnapshots('gemini-antigravity', usage(0.9899333119392395), AT);
     expect(s.map((q) => [q.limitId, q.limitLabel, q.windowMinutes, q.remainingPercent, q.usedPercent, q.extra?.scoring])).toEqual([
-      ['agy:gemini-weekly', 'Gemini · 7 d', 10080, 99.5, 0.5, true],
-      ['agy:gemini-5h', 'Gemini · 5 h', 300, 99, 1, true],
+      ['agy:gemini-weekly', 'Gemini · 7 d', 10080, 99.53, 0.47, true],
+      ['agy:gemini-5h', 'Gemini · 5 h', 300, 98.99, 1.01, true],
       ['agy:3p-weekly', 'Claude y GPT · 7 d', 10080, 100, 0, false],
       ['agy:3p-5h', 'Claude y GPT · 5 h', 300, 100, 0, false],
       ['agy:gemini-argon-wtu-weekly', 'Argon · 7 d', 10080, 100, 0, false],
@@ -68,6 +68,7 @@ describe('Antigravity official quota (agy -p "/usage" --output-format json)', ()
     const rec = recommend(s.listProfiles(), s.latestQuotas(), { now: NOW, staleMinutes: 30, reservePercent: 10 });
     expect(rec.ranked[0]).toMatchObject({ classification: 'recomendable', eligible: true });
     expect(rec.ranked[0].rationale).toBe('80 % restante en Gemini · 5 h (ventana más cargada)');
+    expect(agyUsageToSnapshots(p.id, usage(0.9997796416282654), AT)[1]).toMatchObject({ usedPercent: 0.02, remainingPercent: 99.98 });
 
     const low = new Store(':memory:');
     low.upsertProfile(p);

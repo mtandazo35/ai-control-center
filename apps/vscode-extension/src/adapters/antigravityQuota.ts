@@ -94,14 +94,15 @@ export function agyUsageToSnapshots(accountId: string, json: unknown, observedAt
       const weekly = b.window === 'weekly';
       const fiveH = b.window === '5h';
       if (!weekly && !fiveH) continue;
-      const remaining = Math.round(frac * 1000) / 10;
+      // Two decimals: a light use (0.02 %) must not round to «0 % usado».
+      const remaining = Math.round(frac * 10000) / 100;
       const reset = b.reset_time && !Number.isNaN(Date.parse(b.reset_time)) ? new Date(b.reset_time).toISOString() : null;
       out.push({
         accountId,
         limitId: `agy:${b.id}`,
         limitLabel: `${gl.label} · ${fiveH ? '5 h' : '7 d'}`,
         windowMinutes: fiveH ? 300 : 10080,
-        usedPercent: Math.round((100 - remaining) * 10) / 10,
+        usedPercent: Math.round((100 - remaining) * 100) / 100,
         remainingPercent: remaining,
         resetsAt: reset,
         source: 'antigravity-usage',

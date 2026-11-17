@@ -60,6 +60,9 @@
     return { b, left: Math.max(0, Math.round(100 - b.usedPercent)) };
   }
 
+  /** 0.02 → «< 1 %» (used, just not a whole point); otherwise whole points. */
+  const fmtUsed = (u) => (u > 0 && u < 1 ? '< 1 %' : Math.round(u) + ' %');
+
   function bar(b) {
     const used = b.usedPercent;
     const live = b.state === 'live';
@@ -70,12 +73,13 @@
     const cls = known ? 'bar ' + sev : 'bar off';
     const fill = h('span', null);
     // Width through CSSOM: the CSP (style-src without 'unsafe-inline') blocks style="" attributes.
-    fill.style.width = (known ? Math.min(100, used) : 0) + '%';
+    // Any use gets at least a sliver, so «< 1 %» is not an empty bar.
+    fill.style.width = (known ? Math.min(100, used > 0 ? Math.max(1, used) : 0) : 0) + '%';
     const reset = b.resetText || (used === 0 ? 'Sin ventana activa' : 'Reinicio desconocido');
     return h('div', { class: 'bucket', title: 'Fuente: ' + (SOURCE[b.source] || b.source) + ' · confianza ' + b.confidence + ' · ' + b.reason }, [
       h('div', { class: 'bucket-head' }, [
         h('span', { class: 'bucket-label' }, b.displayLabel || b.label),
-        h('span', { class: 'bucket-val' + (sev ? ' ' + sev : '') }, known ? used + ' %' : STATE[b.state]),
+        h('span', { class: 'bucket-val' + (sev ? ' ' + sev : '') }, known ? fmtUsed(used) : STATE[b.state]),
       ]),
       h('div', { class: cls, role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': known ? used : null, 'aria-label': (b.displayLabel || b.label) + ' usado' }, [fill]),
       h('div', { class: 'bucket-foot' }, [
@@ -98,6 +102,12 @@
     if (ex && ex.ordinaryUsageAllowed === false) warnings.push('El uso incluido en el plan no está permitido ahora');
     const vOk = p.verification === 'verified' || p.verification === 'observed';
     const gem = p.provider === 'gemini';
+    const agyOfficial = gem && p.buckets.some((b) => b.source === 'antigravity-usage' && b.state === 'live');
+    // Antigravity groups that do not decide the account (Claude/GPT, Argon) and are unused: one line, no bars.
+    // Their window only starts counting when used, so their «reset time» moves on every reading and says nothing.
+    const idleGroup = (b) => b.extra && b.extra.scoring === false && b.state === 'live' && b.usedPercent === 0;
+    const shown = p.buckets.filter((b) => !idleGroup(b));
+    const idleNames = [...new Set(p.buckets.filter(idleGroup).map((b) => (b.displayLabel || b.label).split(' · ')[0]))];
     const ctx = p.sessionContext && p.sessionContext.percent !== null ? p.sessionContext : null;
     const det = p.tokens24hDetail || { input: 0, cached: 0, output: 0 };
     const tokTitle = 'Entrada nueva ' + fmtTok(det.input) + ' · salida ' + fmtTok(det.output) + ' · entrada en caché ' + fmtTok(det.cached) + ' (no suma)';
@@ -125,12 +135,14 @@
         ]),
         h('div', { class: 'card-sub' }, [
           p.identityLabel ? h('span', null, p.identityLabel) : null,
-          h('span', { class: 'verif ' + (vOk ? 'ok' : p.verification === 'failed' ? 'crit' : '') }, VERIF[p.verification] || p.verification),
+          agyOfficial
+            ? h('span', { class: 'verif ok' }, 'cuota oficial (agy /usage)')
+            : h('span', { class: 'verif ' + (vOk ? 'ok' : p.verification === 'failed' ? 'crit' : '') }, VERIF[p.verification] || p.verification),
           p.authType ? h('span', null, p.authType) : null,
         ]),
       ]),
       p.hasOfficialQuota
-        ? h('div', { class: 'buckets' }, p.buckets.map(bar))
+        ? h('div', { class: 'buckets' }, shown.map(bar))
         : h('div', { class: 'empty' }, [
             h('strong', null, 'No disponible · solo consumo local. '),
             p.provider === 'claude'
@@ -144,6 +156,10 @@
                 ? h('span', null, p.verificationDetail || '')
                 : h('span', null, p.connectorError || 'Sin respuesta del conector.'),
           ]),
+      idleNames.length
+        ? h('div', { class: 'idle-groups', title: 'Su ventana empieza a contar cuando se usan; la barra aparece con el primer uso.' },
+            idleNames.join(' y ') + ' dentro de Antigravity: sin uso')
+        : null,
       warnings.length ? h('div', { class: 'warn-line' }, warnings.join('. ')) : null,
       gem && (p.models24h || []).length
         ? h('ul', { class: 'models', 'aria-label': 'Uso por modelo en 24 h' }, p.models24h.map((m) =>
