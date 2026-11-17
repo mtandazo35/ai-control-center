@@ -78,7 +78,7 @@ function groupLabel(name: string): { label: string; key: string; scoring: boolea
 
 /**
  * Turns the /usage payload into quota snapshots. Only the Gemini group decides whether the account is free
- * (`extra.scoring`): the builders run on Flash; Claude/GPT inside agy and Argon are shown but not scored.
+ * (`extra.scoring`); Claude/GPT inside agy and Argon are shown but not scored.
  * Returns [] when the payload is not the known shape (never a guessed percentage).
  */
 export function agyUsageToSnapshots(accountId: string, json: unknown, observedAt: string): QuotaSnapshot[] {
