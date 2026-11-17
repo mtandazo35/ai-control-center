@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agyUsageToSnapshots } from '../src/adapters/antigravityQuota';
+import { agyUsageToSnapshots, shouldReadAgyUsage } from '../src/adapters/antigravityQuota';
 import { recommend } from '../src/core/recommend';
 import { Store } from '../src/core/store';
 import { buildViewModel, gatherInput } from '../src/core/viewmodel';
@@ -133,5 +133,18 @@ describe('Antigravity official quota (agy -p "/usage" --output-format json)', ()
     const byKey = Object.fromEntries(s.sessions('2030-01-01T00:00:00Z').map((x) => [x.sessionKey, x.model]));
     expect(byKey[`${p.id}:conv-a`]).toBe('modelo-a');
     expect(byKey[`${p.id}:conv-b`]).toBe('modelo-del-log');
+  });
+
+  it('/usage runs every 15 min, at once after new model calls, or on demand (each call leaves a log file in agy)', () => {
+    const at = (min: number) => new Date(NOW.getTime() + min * 60000);
+    expect(shouldReadAgyUsage(null, NOW, 0)).toBe(true);
+    expect(shouldReadAgyUsage(AT, at(5), 0)).toBe(false);
+    expect(shouldReadAgyUsage(AT, at(10), 0)).toBe(false);
+    expect(shouldReadAgyUsage(AT, at(15), 0)).toBe(true);
+    // the third 5-min collection landing a few seconds early still reads
+    expect(shouldReadAgyUsage(AT, new Date(at(15).getTime() - 10000), 0)).toBe(true);
+    expect(shouldReadAgyUsage(AT, at(5), 3)).toBe(true);
+    expect(shouldReadAgyUsage(AT, at(5), 0, true)).toBe(true);
+    expect(shouldReadAgyUsage('basura', at(1), 0)).toBe(true);
   });
 });

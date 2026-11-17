@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { defaultClaudeConfigDir, ingestStatuslineInbox, readClaudeAuth } from './adapters/claude';
 import { codexRateLimitsToSnapshots, readCodexAccount, type CodexReadResult } from './adapters/codexAppServer';
 import { ingestAntigravityLogs } from './adapters/antigravity';
-import { agyUsageToSnapshots, runAgyUsage } from './adapters/antigravityQuota';
+import { agyUsageToSnapshots, runAgyUsage, shouldReadAgyUsage } from './adapters/antigravityQuota';
 import { ingestAntigravityConversations } from './adapters/antigravityUsage';
 import { ingestClaudeModInbox } from './adapters/claudeMod';
 import { estimateClaudeSession, ingestClaudeUsageCache } from './adapters/claudeUsage';
@@ -230,7 +230,8 @@ export class Collector {
           const r = ingestAntigravityLogs(this.store, p, this.mid);
           ingested[`${p.id}:runs`] = r.runs;
           // Token counts per model call, from Antigravity's own conversation stores (read-only, numbers only).
-          ingested[`${p.id}:calls`] = ingestAntigravityConversations(this.store, p).calls;
+          const newCalls = ingestAntigravityConversations(this.store, p).calls;
+          ingested[`${p.id}:calls`] = newCalls;
           // A run in Antigravity's own logs proves a signed-in session (no identity is read).
           const last = this.store.sessions('1970-01-01').find((x) => x.accountId === p.id);
           if (last && p.verification !== 'observed') {
@@ -238,15 +239,23 @@ export class Collector {
             p.verifiedAt = last.lastSeenAt;
             this.store.upsertProfile(p);
           }
-          // Official quota: `agy -p "/usage"` answers without an agent turn and spends no quota.
-          const u = await runAgyUsage();
-          let quotaError: string | null = u.ok ? null : u.error;
-          if (u.ok) {
-            const snaps = agyUsageToSnapshots(p.id, u.json, now());
-            let n = 0;
-            for (const s of snaps) if (this.store.insertQuota(this.mid, s)) n++;
-            ingested[`${p.id}:quota`] = n;
-            if (!snaps.length) quotaError = 'agy /usage: formato desconocido';
+          // Official quota: `agy -p "/usage"` answers without an agent turn and spends no quota. Every 15 min, or at
+          // once after new use (see shouldReadAgyUsage).
+          const usageKey = `agy-usage-at:${p.id}`;
+          let quotaError: string | null = null;
+          if (shouldReadAgyUsage(this.store.getSetting(usageKey), new Date(), newCalls, opts.force)) {
+            const u = await runAgyUsage();
+            this.store.setSetting(usageKey, now());
+            quotaError = u.ok ? null : u.error;
+            if (u.ok) {
+              const snaps = agyUsageToSnapshots(p.id, u.json, now());
+              let n = 0;
+              for (const s of snaps) if (this.store.insertQuota(this.mid, s)) n++;
+              ingested[`${p.id}:quota`] = n;
+              if (!snaps.length) quotaError = 'agy /usage: formato desconocido';
+            }
+          } else {
+            ingested[`${p.id}:quota`] = 0;
           }
           statuses.push({ accountId: p.id, ok: quotaError === null, error: quotaError, at: now() });
         } else if (p.provider === 'claude') {

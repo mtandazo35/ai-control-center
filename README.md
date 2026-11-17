@@ -241,7 +241,7 @@ datos oficiales vigentes. Haz clic para abrir el dashboard.
 |---|---|---|---|
 | **Claude Code** | **Mod `ai-control-center-feed`**: evento oficial `session.measure` (5 h y semanal). Respaldos: la caché de `/usage` que guarda Claude Code, los avisos «You've hit your limit · resets …» y una estimación de la hora de reinicio de la ventana de 5 h a partir de tu actividad | transcripts locales (solo los contadores `usage`); OTel opcional | en cada respuesta de Claude |
 | **Codex** | `codex app-server` → `account/rateLimits/read`, con tu sesión, sin refrescar el token. Todos los buckets | rollouts locales (`token_count`) y `account/usage/read` | cada 5 min |
-| **Antigravity** (Gemini) | `agy -p "/usage" --output-format json`: porcentaje restante y reinicio de la sesión de 5 h y la semanal de cada grupo de modelos (sin turno, sin gastar cuota). Si falla, queda el aviso del servidor en sus registros («Individual quota reached · Resets in …») | tokens y contexto por llamada (conversaciones locales), ejecuciones y minutos de actividad | cada 5 min |
+| **Antigravity** (Gemini) | `agy -p "/usage" --output-format json`: porcentaje restante y reinicio de la sesión de 5 h y la semanal de cada grupo de modelos (sin turno, sin gastar cuota). Si falla, queda el aviso del servidor en sus registros («Individual quota reached · Resets in …») | tokens y contexto por llamada (conversaciones locales), ejecuciones y minutos de actividad | cuota cada 15 min y al momento tras un uso nuevo; tokens cada 5 min |
 
 Cada cifra lleva su **fuente**, su **hora de observación** y su **fiabilidad**. «Ver origen del dato» las muestra. Una
 cuota con más de 30 minutos se marca como «dato hace X» y no cuenta para la recomendación.
