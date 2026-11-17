@@ -243,6 +243,11 @@ export class Store {
       .run(s.sessionKey, s.accountId, s.machineId, s.project, s.model, s.startedAt, s.lastSeenAt, s.source);
   }
 
+  /** Fills a session's project when its source did not know it (Antigravity's logs carry no folder). */
+  setSessionProject(sessionKey: string, project: string): void {
+    this.db.prepare('UPDATE provider_sessions SET project = ? WHERE session_key = ? AND project IS NULL').run(project, sessionKey);
+  }
+
   sessions(sinceIso: string): (ProviderSession & { tokens: number })[] {
     const rows = this.db
       .prepare(

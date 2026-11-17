@@ -305,3 +305,8 @@ td.r, th.r { text-align: right; }
 @media (prefers-reduced-motion: no-preference) {
   .gauge span, .bar span { transition: width 0.4s ease-out; }
 }
+
+/* Old quota reading: muted fill and value, the age in amber, so it is not read as current. */
+.bar.stale > span { background: var(--muted); opacity: 0.55; }
+.bucket-val.stale { color: var(--muted); }
+.bucket-foot .age { color: var(--warn); }

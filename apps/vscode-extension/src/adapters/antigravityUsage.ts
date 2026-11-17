@@ -174,6 +174,41 @@ export function readAntigravityConversation(file: string): AntigravityCall[] {
 }
 
 /**
+ * Folder the conversation ran in, from `trajectory_metadata_blob` (field 7, or 1.1): a `file:///…` URI. Only its last
+ * segment is kept (e.g. «mi-proyecto»), never the full path, so no user name reaches the database. Null when absent.
+ */
+export function workspaceName(data: Uint8Array | null): string | null {
+  if (!data) return null;
+  try {
+    const f = protoFields(data);
+    const top = f.get(7)?.find((x) => x instanceof Uint8Array) as Uint8Array | undefined;
+    const nested = f.get(1)?.find((x) => x instanceof Uint8Array) as Uint8Array | undefined;
+    const raw = top ?? (nested ? (protoFields(nested).get(1)?.find((x) => x instanceof Uint8Array) as Uint8Array | undefined) : undefined);
+    if (!raw) return null;
+    const uri = Buffer.from(raw).toString('utf8');
+    if (!/^file:\/\//i.test(uri)) return null;
+    const p = decodeURIComponent(uri.replace(/^file:\/\/\/?/i, '')).replace(/[\\/]+$/, '');
+    const name = p.split(/[\\/]/).pop() ?? '';
+    return name && !/^[A-Za-z]:$/.test(name) ? name : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readAntigravityWorkspace(file: string): string | null {
+  const db = new DatabaseSync(file, { readOnly: true });
+  try {
+    db.exec('PRAGMA busy_timeout = 2000');
+    const r = db.prepare("SELECT data FROM trajectory_metadata_blob WHERE id = 'main'").get() as { data: Uint8Array | null } | undefined;
+    return workspaceName(r?.data ?? null);
+  } catch {
+    return null; // older store without the table
+  } finally {
+    db.close();
+  }
+}
+
+/**
  * Writes one token event per model call (idempotent: the key is conversation + call index) and keeps the
  * context fill of the most recent call. Unchanged stores (same size + mtime of the .db and its -wal) are skipped.
  */
@@ -210,8 +245,8 @@ export function ingestAntigravityConversations(
       }
       if (mtimeMs < oldest) continue;
       out.files++;
-      // v2: calls without a model id now take the conversation's model; re-read once to fix stored rows.
-      const cursorKey = 'agy-conv:v2:' + file;
+      // v2: calls without a model id take the conversation's model. v3: also the working folder (session project).
+      const cursorKey = 'agy-conv:v3:' + file;
       const cur = store.getCursor(cursorKey);
       if (cur && cur.size === size && cur.mtimeMs === mtimeMs) continue;
       const conversation = n.slice(0, -3);
@@ -239,6 +274,8 @@ export function ingestAntigravityConversations(
           latest = { at: c.at, tokens: c.contextTokens, window: c.contextWindow, conversation };
         }
       }
+      const project = readAntigravityWorkspace(file);
+      if (project) store.setSessionProject(`${profile.id}:${conversation}`, project);
       store.setCursor(cursorKey, size, size, mtimeMs);
     }
   }

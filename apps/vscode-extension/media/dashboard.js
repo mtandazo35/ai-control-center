@@ -70,7 +70,8 @@
     // Same reading as Claude's usage view: name and % on one line, thin bar, reset time below.
     // Provider colour while there is room; amber from 70 %, red from 95 %.
     const sev = used >= 95 ? 'crit' : used >= 70 ? 'warn' : '';
-    const cls = known ? 'bar ' + sev : 'bar off';
+    // An old reading (not live) is drawn muted: the real value may have moved since.
+    const cls = known ? 'bar ' + sev + (live ? '' : ' stale') : 'bar off';
     const fill = h('span', null);
     // Width through CSSOM: the CSP (style-src without 'unsafe-inline') blocks style="" attributes.
     // Any use gets at least a sliver, so «< 1 %» is not an empty bar.
@@ -79,13 +80,13 @@
     return h('div', { class: 'bucket', title: 'Fuente: ' + (SOURCE[b.source] || b.source) + ' · confianza ' + b.confidence + ' · ' + b.reason }, [
       h('div', { class: 'bucket-head' }, [
         h('span', { class: 'bucket-label' }, b.displayLabel || b.label),
-        h('span', { class: 'bucket-val' + (sev ? ' ' + sev : '') }, known ? fmtUsed(used) : STATE[b.state]),
+        h('span', { class: 'bucket-val' + (sev ? ' ' + sev : '') + (known && !live ? ' stale' : '') }, known ? fmtUsed(used) : STATE[b.state]),
       ]),
       h('div', { class: cls, role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': known ? used : null, 'aria-label': (b.displayLabel || b.label) + ' usado' }, [fill]),
       h('div', { class: 'bucket-foot' }, [
         h('span', null, reset),
         // An old reading says how old it is, on the right, so the reset time stays readable.
-        known && !live ? h('span', { class: 'age' }, 'dato ' + b.age) : null,
+        known && !live ? h('span', { class: 'age', title: 'Este proveedor solo actualiza la cuota mientras se usa; el valor real puede haber cambiado.' }, 'dato ' + b.age + ' · puede haber cambiado') : null,
       ]),
       known ? null : h('div', { class: 'meta' }, b.reason),
     ]);

@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { decodeGeneration, ingestAntigravityConversations, protoFields, readAntigravityConversation, stepTime } from '../src/adapters/antigravityUsage';
+import { decodeGeneration, ingestAntigravityConversations, protoFields, readAntigravityConversation, stepTime, workspaceName } from '../src/adapters/antigravityUsage';
 import { Store } from '../src/core/store';
 import { buildViewModel, gatherInput } from '../src/core/viewmodel';
 import { profile, settings, tmpDir } from './helpers';
@@ -167,5 +167,31 @@ describe('Antigravity conversation stores: tokens per model call (numbers only)'
     const p = profile('gemini', 'gemini-antigravity', 'Google Antigravity');
     s.upsertProfile(p);
     expect(ingestAntigravityConversations(s, p, [dir], new Date())).toEqual({ files: 1, calls: 0, errors: 1 });
+  });
+
+  it('session project = last segment of the folder agy ran in (never the full path); none when absent', () => {
+    const meta = (uri: string, field = 7) => Uint8Array.from(field === 7 ? sField(7, uri) : bField(1, sField(1, uri)));
+    expect(workspaceName(meta('file:///C:/Users/alguien/proyectos/mi%20repo'))).toBe('mi repo');
+    expect(workspaceName(meta('file:///home/alguien/trabajo/api/', 1))).toBe('api');
+    expect(workspaceName(meta('file:///C:/'))).toBeNull();
+    expect(workspaceName(meta('https://example.com/x'))).toBeNull();
+    expect(workspaceName(null)).toBeNull();
+
+    const dir = tmpDir('agy-conv-p');
+    const file = makeConversation(dir, ID1, [genBlob({ input: 10, output: 5, model: 'm' })], ['2030-01-15T12:00:00Z']);
+    const db = new DatabaseSync(file);
+    db.exec("CREATE TABLE trajectory_metadata_blob (id text DEFAULT 'main', data blob, PRIMARY KEY (id))");
+    db.prepare("INSERT INTO trajectory_metadata_blob VALUES ('main', ?)").run(meta('file:///C:/Users/alguien/proyectos/api-demo'));
+    db.close();
+    const s = new Store(':memory:');
+    const p = profile('gemini', 'gemini-antigravity', 'Google Antigravity');
+    s.upsertProfile(p);
+    s.upsertSession({ sessionKey: `${p.id}:${ID1}`, accountId: p.id, machineId: 'm1', project: null, model: 'm', startedAt: '2030-01-15T12:00:00Z', lastSeenAt: '2030-01-15T12:00:00Z', source: 'antigravity-log' });
+    const now = new Date('2030-01-15T13:00:00Z');
+    fs.utimesSync(file, now, now);
+    ingestAntigravityConversations(s, p, [dir], now);
+    const row = s.sessions('2030-01-01T00:00:00Z').find((x) => x.sessionKey === `${p.id}:${ID1}`);
+    expect(row?.project).toBe('api-demo');
+    expect(JSON.stringify(s.sessions('2030-01-01T00:00:00Z'))).not.toContain('alguien');
   });
 });
