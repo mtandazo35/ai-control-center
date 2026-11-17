@@ -397,19 +397,28 @@ ai-control-center/
 ├─ apps/claude-mod/            mod de Claude Code «ai-control-center-feed»
 ├─ .claude-plugin/             marketplace local del mod
 ├─ docs/                       capacidades, arquitectura, instalación, privacidad
+├─ scripts/check-secrets.mjs  revisión de secretos y datos personales (pre-commit)
 └─ release/                    .vsix compilado
 ```
 
 ```powershell
 cd apps\vscode-extension
 npm install
-npm run check      # typecheck + lint + 74 pruebas + empaquetado del .vsix
+npm run check      # typecheck + lint + pruebas + empaquetado del .vsix
 npm run test:host  # prueba de humo en un VS Code real con perfil aislado
 npm run watch      # recompila al guardar
 ```
 
 Las pruebas usan **solo datos inventados** (fechas de 2030, identificadores genéricos). Nunca se suben datos reales de
 una cuenta.
+
+**Revisión antes de cada commit.** `npm install` en la raíz activa `.githooks/pre-commit`
+(`git config core.hooksPath .githooks`), que ejecuta `scripts/check-secrets.mjs` sobre lo que vas a commitear, también
+dentro del `.vsix`. Detiene el commit si encuentra un token o clave (GitHub, Anthropic/OpenAI, Google, AWS, Slack, JWT,
+clave privada), una contraseña en el código, credenciales en una URL, un correo que no sea de ejemplo, una ruta de
+usuario o una IP pública. Tus términos personales (nombre, dominios, otros proyectos) van en
+`.git/info/secret-patterns`, una expresión regular por línea: esa carpeta nunca se sube. Revisión completa a mano:
+`npm run check:secrets`. Los datos de ejemplo usan `ejemplo.com`, `.invalid` y `192.0.2.x`.
 
 Para depurar la extensión, abre `apps\vscode-extension` en VS Code y pulsa `F5`. Para validar el mod:
 `claude plugin validate apps\claude-mod`.

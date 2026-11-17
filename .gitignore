@@ -4,3 +4,16 @@ dist/
 !release/*.vsix
 coverage/
 .vscode-test/
+
+# Never commit local data, tokens or logs (the panel's database lives in %LOCALAPPDATA%, not here).
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+.env
+.env.*
+web-token
+web-url.txt
+*.pid
+*.log
+!apps/vscode-extension/test/fixtures/**/*.log
