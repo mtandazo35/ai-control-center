@@ -247,7 +247,10 @@ export class Store {
     const rows = this.db
       .prepare(
         `SELECT s.*, COALESCE((SELECT SUM(t.input_tokens + t.output_tokens) FROM token_usage_events t
-             WHERE t.account_id = s.account_id AND t.session_id = substr(s.session_key, instr(s.session_key, ':') + 1)), 0) AS tokens
+             WHERE t.account_id = s.account_id AND t.session_id = substr(s.session_key, instr(s.session_key, ':') + 1)), 0) AS tokens,
+           (SELECT t.model FROM token_usage_events t
+             WHERE t.account_id = s.account_id AND t.session_id = substr(s.session_key, instr(s.session_key, ':') + 1)
+               AND t.model IS NOT NULL ORDER BY t.timestamp DESC LIMIT 1) AS event_model
          FROM provider_sessions s WHERE s.last_seen_at >= ? ORDER BY s.last_seen_at DESC LIMIT 200`,
       )
       .all(sinceIso) as Row[];
@@ -256,7 +259,8 @@ export class Store {
       accountId: String(r.account_id),
       machineId: String(r.machine_id),
       project: str(r.project),
-      model: str(r.model),
+      // A run whose log carried no model (Antigravity) takes the model of its own calls.
+      model: str(r.model) ?? str(r.event_model),
       startedAt: String(r.started_at),
       lastSeenAt: String(r.last_seen_at),
       source: String(r.source) as ProviderSession['source'],

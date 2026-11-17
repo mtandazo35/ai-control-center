@@ -229,7 +229,10 @@
     svg.appendChild(lbl);
     [0, Math.floor(n / 2), n - 1].forEach((i) => {
       const t = document.createElementNS(NS, 'text');
-      t.setAttribute('x', String(pad + i * bw));
+      // The last label ends at the chart's right edge instead of starting there (it was cut: «15:0»).
+      const last = i === n - 1 && n > 1;
+      t.setAttribute('x', String(last ? pad + n * bw : pad + i * bw));
+      if (last) t.setAttribute('text-anchor', 'end');
       t.setAttribute('y', String(H + 16));
       t.setAttribute('class', 'axis');
       t.textContent = series.labels ? series.labels[i] : series.buckets[i];

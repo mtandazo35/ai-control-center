@@ -115,4 +115,18 @@ describe('Antigravity official quota (agy -p "/usage" --output-format json)', ()
     logQuota('2030-01-15T13:30:00.000Z', 100);
     expect(s.latestQuotas().find((q) => q.limitId === 'agy:individual')).toMatchObject({ usedPercent: 100 });
   });
+
+  it('a run with no model in its log shows the model of its own calls in the sessions table', () => {
+    const s = new Store(':memory:');
+    const p = profile('gemini', 'gemini-antigravity', 'Google Antigravity');
+    s.upsertProfile(p);
+    s.upsertSession({ sessionKey: `${p.id}:conv-a`, accountId: p.id, machineId: 'm1', project: null, model: null, startedAt: AT, lastSeenAt: AT, source: 'antigravity-log' });
+    s.upsertSession({ sessionKey: `${p.id}:conv-b`, accountId: p.id, machineId: 'm1', project: null, model: 'modelo-del-log', startedAt: AT, lastSeenAt: AT, source: 'antigravity-log' });
+    for (const [conv, model] of [['conv-a', 'modelo-a'], ['conv-b', 'modelo-b']]) {
+      s.upsertTokenEvent({ eventKey: `agy:${conv}:0`, accountId: p.id, sessionId: conv, model, inputTokens: 10, outputTokens: 5, cachedTokens: 0, timestamp: AT, source: 'antigravity-conversation' });
+    }
+    const byKey = Object.fromEntries(s.sessions('2030-01-01T00:00:00Z').map((x) => [x.sessionKey, x.model]));
+    expect(byKey[`${p.id}:conv-a`]).toBe('modelo-a');
+    expect(byKey[`${p.id}:conv-b`]).toBe('modelo-del-log');
+  });
 });
