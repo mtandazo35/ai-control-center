@@ -44,7 +44,9 @@ que te quedes sin cuota y recomienda qué cuenta usar para la siguiente tarea.
 - **Consumo medido por la app**: tokens de las últimas 24 h (con el desglose entrada, caché y salida al pasar el
   mouse), sesiones activas y contexto de la sesión actual (Claude) o de la última ejecución (Antigravity).
   - Antigravity: tokens y contexto de cada llamada, leídos de sus propias conversaciones locales (solo las cifras y el
-    nombre del modelo, nunca el contenido), y una línea por modelo usado en 24 h.
+    nombre del modelo, nunca el contenido), y una línea por modelo usado en 24 h. Algunas ejecuciones Antigravity las
+    guarda cifradas (`<id>.pb`): cuentan como ejecución y en la cuota oficial, y salen como «sin desglose · tokens no
+    legibles».
 - La cuenta en uso (correo enmascarado), el plan y el estado de la sesión.
 
 **Además:**

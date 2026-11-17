@@ -118,10 +118,10 @@ export function agyUsageToSnapshots(accountId: string, json: unknown, observedAt
 
 /**
  * Each `/usage` call leaves one log file in agy's log folder, so it is not run on every collection: every
- * `everyMinutes` (15), right away when new model calls were just read from the conversations (fresh use), or on demand.
+ * `everyMinutes` (15), right away after fresh use (a conversation written since the last reading), or on demand.
  */
-export function shouldReadAgyUsage(lastAt: string | null, now: Date, newCalls: number, force = false, everyMinutes = 15): boolean {
-  if (force || newCalls > 0 || !lastAt) return true;
+export function shouldReadAgyUsage(lastAt: string | null, now: Date, freshUse: boolean, force = false, everyMinutes = 15): boolean {
+  if (force || freshUse || !lastAt) return true;
   const t = Date.parse(lastAt);
   // 30 s of slack: the third 5-min collection after a reading may land a few seconds early.
   return Number.isNaN(t) || now.getTime() - t >= everyMinutes * 60000 - 30000;

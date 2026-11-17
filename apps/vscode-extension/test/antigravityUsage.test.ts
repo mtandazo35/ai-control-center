@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { decodeGeneration, ingestAntigravityConversations, protoFields, readAntigravityConversation, stepTime, workspaceName } from '../src/adapters/antigravityUsage';
+import { decodeGeneration, ingestAntigravityConversations, latestAgyConversationMs, protoFields, readAntigravityConversation, stepTime, workspaceName } from '../src/adapters/antigravityUsage';
 import { Store } from '../src/core/store';
 import { buildViewModel, gatherInput } from '../src/core/viewmodel';
 import { profile, settings, tmpDir } from './helpers';
@@ -193,5 +193,23 @@ describe('Antigravity conversation stores: tokens per model call (numbers only)'
     const row = s.sessions('2030-01-01T00:00:00Z').find((x) => x.sessionKey === `${p.id}:${ID1}`);
     expect(row?.project).toBe('api-demo');
     expect(JSON.stringify(s.sessions('2030-01-01T00:00:00Z'))).not.toContain('alguien');
+  });
+
+  it('fresh use = newest conversation store, also the encrypted .pb form; -wal/-shm (touched by reading) do not count', () => {
+    const dir = tmpDir('agy-conv-fresh');
+    const old = new Date('2030-01-15T10:00:00Z');
+    const fresh = new Date('2030-01-15T12:30:00Z');
+    const later = new Date('2030-01-15T13:00:00Z');
+    const db = makeConversation(dir, ID1, [genBlob({ input: 10, output: 5, model: 'm' })], ['2030-01-15T10:00:00Z']);
+    fs.utimesSync(db, old, old);
+    expect(latestAgyConversationMs([dir])).toBe(old.getTime());
+    fs.writeFileSync(path.join(dir, ID1 + '.db-wal'), 'x');
+    fs.utimesSync(path.join(dir, ID1 + '.db-wal'), later, later);
+    expect(latestAgyConversationMs([dir])).toBe(old.getTime());
+    const pb = path.join(dir, ID2 + '.pb');
+    fs.writeFileSync(pb, Buffer.from([0xb9, 0x71, 0x9c]));
+    fs.utimesSync(pb, fresh, fresh);
+    expect(latestAgyConversationMs([dir])).toBe(fresh.getTime());
+    expect(latestAgyConversationMs([path.join(dir, 'no-existe')])).toBe(0);
   });
 });

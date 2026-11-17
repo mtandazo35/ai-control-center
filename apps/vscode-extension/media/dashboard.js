@@ -123,6 +123,7 @@
     const tokTitle = 'Entrada nueva ' + fmtTok(det.input) + ' · salida ' + fmtTok(det.output) + ' · entrada en caché ' + fmtTok(det.cached) + ' (no suma)';
     // Antigravity: tokens come from its conversation stores; if none decoded (older agy, other format) say so.
     const gemTok = gem && !(p.models24h || []).length;
+    const gemHidden = gem ? Math.max(0, (p.runs24h || 0) - (p.models24h || []).reduce((n, m) => n + (m.sessions || 0), 0)) : 0;
     const stats = [
       gemTok
         ? stat('—', 'tokens en 24 h', 'No se pudieron leer tokens de las conversaciones locales de Antigravity')
@@ -177,7 +178,14 @@
             h('li', null, [
               h('span', { class: 'model-name', title: m.model }, m.model),
               h('span', { class: 'model-use' }, (m.sessions === 1 ? '1 ejecución' : m.sessions + ' ejecuciones') + ' · ' + fmtTok(m.tokens) + ' tokens'),
-            ])))
+            ]))
+            // Runs Antigravity saved encrypted: counted as runs, but their tokens and model cannot be read.
+            .concat(gemHidden > 0
+              ? [h('li', { title: 'Antigravity guardó estas conversaciones cifradas: cuentan en la cuota oficial, pero sus tokens no se pueden leer.' }, [
+                  h('span', { class: 'model-name muted' }, 'sin desglose'),
+                  h('span', { class: 'model-use' }, (gemHidden === 1 ? '1 ejecución' : gemHidden + ' ejecuciones') + ' · tokens no legibles'),
+                ])]
+              : []))
         : null,
       h('div', { class: 'stats', 'aria-label': 'Medido en este PC' }, stats),
       p.connectorOk === false ? h('div', { class: 'error' }, 'Recolector: ' + (p.connectorError || 'error')) : null,

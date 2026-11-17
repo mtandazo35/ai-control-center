@@ -174,6 +174,31 @@ export function readAntigravityConversation(file: string): AntigravityCall[] {
 }
 
 /**
+ * Newest write time (ms) of a conversation store: `<id>.db`, or `<id>.pb` — the encrypted form some runs are saved in,
+ * whose tokens cannot be read but which still proves fresh use. The `-wal`/`-shm` files are left out: opening a store
+ * read-only touches them.
+ */
+export function latestAgyConversationMs(dirs: string[] = defaultAntigravityConversationDirs()): number {
+  let latest = 0;
+  for (const dir of dirs) {
+    let names: string[];
+    try {
+      names = fs.readdirSync(dir).filter((n) => /^[0-9a-f-]{36}\.(db|pb)$/.test(n));
+    } catch {
+      continue;
+    }
+    for (const n of names) {
+      try {
+        latest = Math.max(latest, fs.statSync(path.join(dir, n)).mtimeMs);
+      } catch {
+        /* removed meanwhile */
+      }
+    }
+  }
+  return latest;
+}
+
+/**
  * Folder the conversation ran in, from `trajectory_metadata_blob` (field 7, or 1.1): a `file:///…` URI. Only its last
  * segment is kept (e.g. «mi-proyecto»), never the full path, so no user name reaches the database. Null when absent.
  */

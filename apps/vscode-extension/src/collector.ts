@@ -4,7 +4,7 @@ import { defaultClaudeConfigDir, ingestStatuslineInbox, readClaudeAuth } from '.
 import { codexRateLimitsToSnapshots, readCodexAccount, type CodexReadResult } from './adapters/codexAppServer';
 import { ingestAntigravityLogs } from './adapters/antigravity';
 import { agyUsageToSnapshots, runAgyUsage, shouldReadAgyUsage } from './adapters/antigravityQuota';
-import { ingestAntigravityConversations } from './adapters/antigravityUsage';
+import { ingestAntigravityConversations, latestAgyConversationMs } from './adapters/antigravityUsage';
 import { ingestClaudeModInbox } from './adapters/claudeMod';
 import { estimateClaudeSession, ingestClaudeUsageCache } from './adapters/claudeUsage';
 import { defaultCodexHome, type GeminiProduct } from './adapters/detect';
@@ -243,7 +243,9 @@ export class Collector {
           // once after new use (see shouldReadAgyUsage).
           const usageKey = `agy-usage-at:${p.id}`;
           let quotaError: string | null = null;
-          if (shouldReadAgyUsage(this.store.getSetting(usageKey), new Date(), newCalls, opts.force)) {
+          const lastUsage = this.store.getSetting(usageKey);
+          const freshUse = newCalls > 0 || (lastUsage !== null && latestAgyConversationMs() > Date.parse(lastUsage));
+          if (shouldReadAgyUsage(lastUsage, new Date(), freshUse, opts.force)) {
             const u = await runAgyUsage();
             this.store.setSetting(usageKey, now());
             quotaError = u.ok ? null : u.error;

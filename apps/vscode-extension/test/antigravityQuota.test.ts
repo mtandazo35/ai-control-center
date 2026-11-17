@@ -137,14 +137,14 @@ describe('Antigravity official quota (agy -p "/usage" --output-format json)', ()
 
   it('/usage runs every 15 min, at once after new model calls, or on demand (each call leaves a log file in agy)', () => {
     const at = (min: number) => new Date(NOW.getTime() + min * 60000);
-    expect(shouldReadAgyUsage(null, NOW, 0)).toBe(true);
-    expect(shouldReadAgyUsage(AT, at(5), 0)).toBe(false);
-    expect(shouldReadAgyUsage(AT, at(10), 0)).toBe(false);
-    expect(shouldReadAgyUsage(AT, at(15), 0)).toBe(true);
+    expect(shouldReadAgyUsage(null, NOW, false)).toBe(true);
+    expect(shouldReadAgyUsage(AT, at(5), false)).toBe(false);
+    expect(shouldReadAgyUsage(AT, at(10), false)).toBe(false);
+    expect(shouldReadAgyUsage(AT, at(15), false)).toBe(true);
     // the third 5-min collection landing a few seconds early still reads
-    expect(shouldReadAgyUsage(AT, new Date(at(15).getTime() - 10000), 0)).toBe(true);
-    expect(shouldReadAgyUsage(AT, at(5), 3)).toBe(true);
-    expect(shouldReadAgyUsage(AT, at(5), 0, true)).toBe(true);
-    expect(shouldReadAgyUsage('basura', at(1), 0)).toBe(true);
+    expect(shouldReadAgyUsage(AT, new Date(at(15).getTime() - 10000), false)).toBe(true);
+    expect(shouldReadAgyUsage(AT, at(5), true)).toBe(true);
+    expect(shouldReadAgyUsage(AT, at(5), false, true)).toBe(true);
+    expect(shouldReadAgyUsage('basura', at(1), false)).toBe(true);
   });
 });
