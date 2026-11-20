@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { holderIsDead } from '../src/collector';
+import { holderIsDead, retryOnce } from '../src/collector';
 import { Store } from '../src/core/store';
 import type { AlertRecord } from '../src/core/types';
 import { groupAlerts } from '../src/core/viewmodel';
@@ -60,5 +60,33 @@ describe('alert groups', () => {
       acknowledged: false,
     });
     expect(g[1]).toMatchObject({ count: 1, severity: 'warning' });
+  });
+});
+
+describe('session check retry', () => {
+  it('one bad answer is retried after the delay; two bad answers stay bad; a good first answer is not repeated', async () => {
+    const waits: number[] = [];
+    const sleep = async (ms: number) => {
+      waits.push(ms);
+    };
+    const seq = (...answers: boolean[]) => {
+      let i = 0;
+      return { calls: () => i, run: async () => answers[i++] };
+    };
+    const blip = seq(false, true);
+    expect(await retryOnce(blip.run, (x) => x, 60000, sleep)).toBe(true);
+    expect([blip.calls(), waits]).toEqual([2, [60000]]);
+
+    const down = seq(false, false);
+    expect(await retryOnce(down.run, (x) => x, 60000, sleep)).toBe(false);
+    expect(down.calls()).toBe(2);
+
+    const fine = seq(true);
+    expect(await retryOnce(fine.run, (x) => x, 60000, sleep)).toBe(true);
+    expect(fine.calls()).toBe(1);
+
+    const manual = seq(false, true);
+    expect(await retryOnce(manual.run, (x) => x, 0, sleep)).toBe(false);
+    expect(manual.calls()).toBe(1);
   });
 });

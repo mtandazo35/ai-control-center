@@ -98,11 +98,24 @@ export interface VerifyResult {
  * Verifies a profile through the official tool (claude auth status / codex app-server account/read)
  * and checks that it is not the same account as another profile (isolation check).
  */
+/**
+ * Runs `attempt`; if the result is not good, waits `delayMs` and tries once more. Used for the periodic Claude session
+ * check: `claude auth status` can answer «not logged in» for a moment while the sign-in renews, and one bad answer
+ * should not mark the account as failed.
+ */
+export async function retryOnce<T>(attempt: () => Promise<T>, good: (r: T) => boolean, delayMs: number, sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))): Promise<T> {
+  const first = await attempt();
+  if (good(first) || delayMs <= 0) return first;
+  await sleep(delayMs);
+  return attempt();
+}
+
 export async function verifyProfile(
   store: Store,
   cfg: CollectorConfig,
   p: ExecutionProfile,
   preRead?: CodexReadResult,
+  opts: { retryDelayMs?: number } = {},
 ): Promise<VerifyResult> {
   const now = new Date().toISOString();
   const before = p.verification;
@@ -111,7 +124,7 @@ export async function verifyProfile(
   let message = '';
   let codex: CodexReadResult | undefined;
   if (p.provider === 'claude') {
-    const r = await readClaudeAuth(cfg.claudeCommand, p.configDir);
+    const r = await retryOnce(() => readClaudeAuth(cfg.claudeCommand, p.configDir), (x) => x.ok && x.loggedIn, opts.retryDelayMs ?? 0);
     if (!r.ok) message = `claude auth status falló: ${r.error}`;
     else if (!r.loggedIn) {
       authProblem = true;
@@ -266,7 +279,8 @@ export class Collector {
           ingested[`${p.id}:usage-cache`] = ingestClaudeUsageCache(this.store, p, this.mid);
           // Identity check is cheap but spawns a process: every 6th run, or on demand.
           if (opts.force || this.runs % 6 === 1) {
-            const v = await verifyProfile(this.store, this.cfg, p);
+            // Periodic check: one «no session» answer is retried a minute later before marking the account as failed.
+            const v = await verifyProfile(this.store, this.cfg, p, undefined, { retryDelayMs: opts.force ? 0 : 60000 });
             statuses.push({ accountId: p.id, ok: v.ok, error: v.ok ? null : v.message, at: now(), authProblem: v.authProblem });
           } else {
             statuses.push({ accountId: p.id, ok: p.verification !== 'failed', error: p.verification === 'failed' ? p.verificationDetail : null, at: now() });
