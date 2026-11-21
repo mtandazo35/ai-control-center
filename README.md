@@ -158,6 +158,8 @@ node dist\agent.js --web
   ```
 
   El navegador recuerda el acceso durante 30 días, y desde entonces basta con `http://127.0.0.1:4320`.
+  Si al arrancar Windows tiene reservado el 4320 (Hyper-V y WSL reservan bloques de puertos en cada inicio), el
+  agente usa otro puerto libre y lo anota en `web-url.txt` y en su registro: abre siempre la dirección de ese archivo.
 - El agente sigue corriendo mientras esa ventana esté abierta. Se detiene con `Ctrl+C`.
 
 ### 4. (Opcional) La extensión de VS Code
@@ -348,7 +350,7 @@ Más detalle en [`docs/privacy.md`](docs/privacy.md).
 | Claude «Sesión (5 h): sin dato · Se reinicia … (estimado)» | El mod no está instalado o todavía no hubo respuesta. Comprueba `claude plugin list` y envía cualquier mensaje a Claude. |
 | El mod está instalado pero no aparece `claude-mod-*.json` | El mod solo escribe si existe la carpeta `inbox`, que crea el agente: arráncalo una vez. Si cambiaste la carpeta de datos, define `AI_CONTROL_CENTER_DATA`. |
 | Claude semanal con «dato hace X horas» | Es el respaldo de la caché de `/usage`. Con el mod activo se actualiza en cada respuesta. |
-| El panel no abre (`127.0.0.1:4320` rechaza la conexión) | El agente no está corriendo: `node dist\agent.js --web`. |
+| El panel no abre (`127.0.0.1:4320` rechaza la conexión) | Mira `%LOCALAPPDATA%\ai-control-center\web-url.txt`: si Windows reservó el 4320 al arrancar, el agente está en otro puerto (su registro dice «puerto 4320 no disponible … se usa N»). Si el archivo no responde, el agente no está corriendo: `node dist\agent.js --web`. Puertos reservados: `netsh interface ipv4 show excludedportrange protocol=tcp`. |
 | `panel web no iniciado: EADDRINUSE` en `agent.log` | Ya hay otro agente usando el puerto. Ciérralo (`Get-CimInstance Win32_Process -Filter "Name='node.exe'"` y busca `agent.js`) o usa `--web-port`. |
 | «Falta el token» / error 401 | Abre la URL de `web-url.txt` una vez para crear la cookie. |
 | Codex con error o «sin sesión» | Ejecuta `codex login`. Comprueba que `codex app-server --help` funciona desde PowerShell. |

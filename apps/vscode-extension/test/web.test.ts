@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Store } from '../src/core/store';
-import { loadOrCreateToken, startWebServer, type WebHandle } from '../src/web';
+import { loadOrCreateToken, panelAnswers, startWebServer, startWebServerWithFallback, type WebHandle } from '../src/web';
 import { profile, quota, settings, tmpDir } from './helpers';
 
 function get(port: number, p: string, headers: Record<string, string> = {}, method = 'GET') {
@@ -107,5 +107,31 @@ describe('local web panel', () => {
     ([...doc.querySelectorAll('button')].find((b) => b.textContent === '30d') as HTMLButtonElement).click();
     expect(fetched.at(-1)).toBe('/api/state?range=30d');
     dom.window.close();
+  });
+});
+
+describe('panel port fallback', () => {
+  it('a taken port moves the panel to a free one, says why, and the new address answers', async () => {
+    const store = new Store(':memory:');
+    const busy = http.createServer();
+    await new Promise<void>((r) => busy.listen(0, '127.0.0.1', () => r()));
+    const busyPort = (busy.address() as { port: number }).port;
+    const token = 'a'.repeat(64);
+    const web = await startWebServerWithFallback(store, { host: '127.0.0.1', port: busyPort, token, settings: () => settings });
+    try {
+      expect(web.fallbackFrom).toBe('EADDRINUSE');
+      expect(web.port).not.toBe(busyPort);
+      expect(web.url).toBe(`http://127.0.0.1:${web.port}/?token=${token}`);
+      expect(await panelAnswers(web.url)).toBe(true);
+      const free = await startWebServerWithFallback(store, { host: '127.0.0.1', port: 0, token, settings: () => settings });
+      expect(free.fallbackFrom).toBeNull();
+      await free.close();
+    } finally {
+      await web.close();
+      busy.close();
+      store.close();
+    }
+    expect(await panelAnswers(web.url)).toBe(false);
+    expect(await panelAnswers('no es una url')).toBe(false);
   });
 });

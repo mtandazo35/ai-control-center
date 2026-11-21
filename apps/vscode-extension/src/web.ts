@@ -155,3 +155,37 @@ export function startWebServer(store: Store, opts: WebOptions): Promise<WebHandl
     });
   });
 }
+
+/**
+ * Starts the panel on `opts.port`; when that port cannot be used it takes a free one the OS picks. On Windows a fixed
+ * port can be refused (EACCES) on some boots: Hyper-V/WSL reserve blocks of ports at startup, anywhere in the dynamic
+ * range. `fallbackFrom` says why the configured port was not used (null when it was).
+ */
+export async function startWebServerWithFallback(store: Store, opts: WebOptions): Promise<WebHandle & { fallbackFrom: string | null }> {
+  try {
+    return { ...(await startWebServer(store, opts)), fallbackFrom: null };
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code ?? '';
+    if (code !== 'EACCES' && code !== 'EADDRINUSE') throw e;
+    return { ...(await startWebServer(store, { ...opts, port: 0 })), fallbackFrom: code };
+  }
+}
+
+/** True when a panel answers at the URL's host:port (any HTTP reply counts: 401 without the cookie is fine). */
+export function panelAnswers(url: string, timeoutMs = 1500): Promise<boolean> {
+  return new Promise((resolve) => {
+    let u: URL;
+    try {
+      u = new URL(url);
+    } catch {
+      resolve(false);
+      return;
+    }
+    const req = http.get({ host: u.hostname, port: u.port, path: '/', timeout: timeoutMs }, (res) => {
+      res.resume();
+      resolve(true);
+    });
+    req.on('timeout', () => req.destroy());
+    req.on('error', () => resolve(false));
+  });
+}

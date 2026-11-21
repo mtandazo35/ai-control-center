@@ -33,7 +33,7 @@ import { exists, redact, slug } from './core/util';
 import { buildViewModel, CLASS_LABEL, gatherInput, type Range, type ViewModel } from './core/viewmodel';
 import { DashboardPanel } from './ui/dashboard';
 import { AccountsTree, AlertsTree } from './ui/tree';
-import { isLoopback, loadOrCreateToken, startWebServer, type WebHandle } from './web';
+import { isLoopback, loadOrCreateToken, panelAnswers, startWebServerWithFallback, type WebHandle } from './web';
 
 let store: Store | undefined;
 let collector: Collector | undefined;
@@ -576,6 +576,21 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     const host = cfg().get<string>('webHost') || '127.0.0.1';
     const port = cfg().get<number>('webPort') ?? 4320;
     const token = loadOrCreateToken(dataDir());
+    // The resident agent may already serve the panel, possibly on another port (web-url.txt holds the one in use).
+    if (!web) {
+      let agentUrl = '';
+      try {
+        agentUrl = fs.readFileSync(path.join(dataDir(), 'web-url.txt'), 'utf8').trim();
+      } catch {
+        agentUrl = '';
+      }
+      if (agentUrl && (await panelAnswers(agentUrl))) {
+        await vscode.env.openExternal(vscode.Uri.parse(agentUrl));
+        const pick = await vscode.window.showInformationMessage('Panel web abierto en el navegador.', 'Copiar URL con token');
+        if (pick) await vscode.env.clipboard.writeText(agentUrl);
+        return;
+      }
+    }
     if (!isLoopback(host)) {
       const ok = await vscode.window.showWarningMessage(
         `El panel escuchará en ${host}:${port}: cualquier equipo de tu red podrá pedirlo. Sigue siendo de solo lectura y exige el token. ¿Continuar?`,
@@ -586,14 +601,12 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
     }
     if (!web) {
       try {
-        web = await startWebServer(st, { host, port, token, settings: readSettings });
+        // Port reserved by Windows or taken: a free one is used instead (startWebServerWithFallback).
+        web = await startWebServerWithFallback(st, { host, port, token, settings: readSettings });
         st.audit('web-start', `${host}:${web.port}`, new Date().toISOString());
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== 'EADDRINUSE') {
-          void vscode.window.showErrorMessage(`No se pudo abrir el panel web: ${(e as Error).message}`);
-          return;
-        }
-        // Another window or the resident agent already serves it (same database, same token).
+        void vscode.window.showErrorMessage(`No se pudo abrir el panel web: ${(e as Error).message}`);
+        return;
       }
     }
     const shown = host === '0.0.0.0' || host === '::' ? 'localhost' : host;

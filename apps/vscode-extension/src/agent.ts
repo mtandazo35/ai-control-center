@@ -12,7 +12,7 @@ import { detectTools } from './adapters/detect';
 import { Collector, defaultDataDir, ensureDefaultProfiles, machineId } from './collector';
 import { Store } from './core/store';
 import { redact } from './core/util';
-import { isLoopback, loadOrCreateToken, startWebServer } from './web';
+import { isLoopback, loadOrCreateToken, startWebServerWithFallback } from './web';
 
 function arg(name: string, def?: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -92,8 +92,10 @@ async function main(): Promise<void> {
     const host = arg('--web-host', '127.0.0.1')!;
     const port = Number(arg('--web-port', '4320'));
     try {
-      const web = await startWebServer(store, { host, port, token: loadOrCreateToken(dataDir), settings: () => agentSettings });
+      const web = await startWebServerWithFallback(store, { host, port, token: loadOrCreateToken(dataDir), settings: () => agentSettings });
+      // web-url.txt always holds the address in use: the extension and the user open the panel from it.
       fs.writeFileSync(path.join(dataDir, 'web-url.txt'), web.url + '\n', { mode: 0o600 });
+      if (web.fallbackFrom) log(`puerto ${port} no disponible (${web.fallbackFrom}${web.fallbackFrom === 'EACCES' ? ': reservado por Windows' : ': en uso'}); se usa ${web.port}`);
       log(`panel web en ${host}:${web.port}${isLoopback(host) ? '' : ' (accesible en la red: requiere token)'}`);
       process.stdout.write(`Panel web: ${web.url}\n`);
     } catch (e) {
