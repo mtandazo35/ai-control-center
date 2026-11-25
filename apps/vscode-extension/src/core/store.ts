@@ -178,7 +178,27 @@ export class Store {
     for (const q of out) {
       if (q.source === 'antigravity-usage' && (usageAt.get(q.accountId) ?? '') < q.observedAt) usageAt.set(q.accountId, q.observedAt);
     }
-    return out.filter((q) => !(q.limitId === 'agy:individual' && usageAt.has(q.accountId) && q.observedAt <= usageAt.get(q.accountId)!));
+    const kept = out.filter((q) => !(q.limitId === 'agy:individual' && usageAt.has(q.accountId) && q.observedAt <= usageAt.get(q.accountId)!));
+    // Claude: an activity estimate (no %) never hides a recent real reading of the same window. The real one wins when
+    // it was observed at most 30 min before the estimate and its reset is still ahead of the estimate.
+    return kept.map((q) => {
+      if (q.source !== 'claude-activity-estimate') return q;
+      const real = this.latestQuota(q.accountId, q.limitId, 'claude-activity-estimate');
+      if (!real || real.usedPercent === null || !real.resetsAt) return q;
+      const fresh = Date.parse(q.observedAt) - Date.parse(real.observedAt) <= 30 * 60000;
+      return fresh && real.resetsAt > q.observedAt ? real : q;
+    });
+  }
+
+  /** Newest snapshot of one limit, optionally leaving out one source (e.g. the activity estimate). */
+  latestQuota(accountId: string, limitId: string, excludeSource?: string): QuotaSnapshot | null {
+    const r = this.db
+      .prepare(
+        `SELECT * FROM quota_snapshots WHERE account_id = ? AND limit_id = ? AND source <> ?
+         ORDER BY observed_at DESC, id DESC LIMIT 1`,
+      )
+      .get(accountId, limitId, excludeSource ?? '') as Row | undefined;
+    return r ? rowToQuota(r) : null;
   }
 
   quotaHistory(accountId: string, sinceIso: string): QuotaSnapshot[] {

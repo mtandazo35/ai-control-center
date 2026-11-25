@@ -216,7 +216,9 @@ export function estimateClaudeSession(store: Store, accountId: string, machineId
   ).map((r) => Date.parse(r.timestamp));
   const w = inferFiveHourWindow(ts, now.getTime());
   if (!w) return false;
-  const official = store.latestQuotas().find((q) => q.accountId === accountId && q.limitId === 'five_hour' && q.source !== 'claude-activity-estimate');
+  // The newest REAL reading, read directly: through latestQuotas() an earlier estimate would hide it, and every pass
+  // would write a new estimate over the real data.
+  const official = store.latestQuota(accountId, 'five_hour', 'claude-activity-estimate');
   const knows = official && official.resetsAt && Math.abs(Date.parse(official.resetsAt) - w.end) <= 15 * 60000 && Date.parse(official.observedAt) >= w.firstMessage - 60000;
   if (knows) return false;
   store.insertQuota(machineId, {

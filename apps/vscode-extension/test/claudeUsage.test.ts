@@ -148,4 +148,21 @@ describe('Claude 5-hour window estimated from local activity (reset time only, n
     expect(estimateClaudeSession(s, 'claude-a', 'm1', new Date('2030-01-08T18:10:00Z'))).toBe(false);
     expect(s.latestQuotas().find((q) => q.limitId === 'five_hour')?.usedPercent).toBe(30);
   });
+
+  it('an earlier estimate does not hide later real readings, and no new estimate is written over them', () => {
+    const s = storeWithActivity();
+    const base = usageCacheToSnapshots('claude-a', CACHE)[0];
+    // An estimate from before the real data arrived (no %).
+    s.insertQuota('m1', { ...base, usedPercent: null, remainingPercent: null, resetsAt: '2030-01-08T18:30:00.000Z', observedAt: '2030-01-08T17:40:00.000Z', source: 'claude-activity-estimate', status: 'estimated', confidence: 'low' });
+    // The real reading of the same window (the mod), observed a bit later.
+    s.insertQuota('m1', { ...base, usedPercent: 81, remainingPercent: 19, resetsAt: '2030-01-08T18:30:00.000Z', observedAt: '2030-01-08T17:46:00.000Z', source: 'claude-mod' });
+    const now = new Date('2030-01-08T17:50:00Z');
+    expect(estimateClaudeSession(s, 'claude-a', 'm1', now)).toBe(false);
+    expect(s.latestQuotas().find((q) => q.limitId === 'five_hour')).toMatchObject({ usedPercent: 81, source: 'claude-mod' });
+
+    // Even if an estimate is newer (written in the same pass), a fresh real reading of that window is what is shown.
+    s.insertQuota('m1', { ...base, usedPercent: null, remainingPercent: null, resetsAt: '2030-01-08T18:30:00.000Z', observedAt: '2030-01-08T17:51:00.000Z', source: 'claude-activity-estimate', status: 'estimated', confidence: 'low' });
+    const b = buildViewModel(gatherInput(s, '24h', now), settings, '24h', now).profiles[0].buckets.find((x) => x.limitId === 'five_hour')!;
+    expect(b).toMatchObject({ usedPercent: 81, source: 'claude-mod' });
+  });
 });
