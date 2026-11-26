@@ -147,4 +147,24 @@ describe('Antigravity official quota (agy -p "/usage" --output-format json)', ()
     expect(shouldReadAgyUsage(AT, at(5), false, true)).toBe(true);
     expect(shouldReadAgyUsage('basura', at(1), false)).toBe(true);
   });
+
+  it('agy 1.5.18: epoch reset = no window; a bucket missing from the newest reading is dropped', () => {
+    const s = new Store(':memory:');
+    const p = profile('gemini', 'gemini-antigravity', 'Google Antigravity');
+    s.upsertProfile(p);
+    // Older reading that still listed Argon.
+    for (const q of agyUsageToSnapshots(p.id, usage(0.9), '2030-01-12T13:00:00.000Z')) s.insertQuota('m1', q);
+    // Newer reading: no Argon group, Claude/GPT unused with reset_time 1970-01-01.
+    const now = usage(0.88);
+    now.command.data.groups = now.command.data.groups.slice(0, 2);
+    for (const b of now.command.data.groups[1].buckets) b.reset_time = '1970-01-01T00:00:00Z';
+    const snaps = agyUsageToSnapshots(p.id, now, AT);
+    expect(snaps.find((q) => q.limitId === 'agy:3p-5h')?.resetsAt).toBeNull();
+    for (const q of snaps) s.insertQuota('m1', q);
+    const ids = s.latestQuotas().map((q) => q.limitId);
+    expect(ids).not.toContain('agy:gemini-argon-wtu-weekly');
+    expect(ids).toContain('agy:3p-5h');
+    const card = buildViewModel(gatherInput(s, '24h', NOW), settings, '24h', NOW).profiles[0];
+    expect(card.buckets.find((b) => b.limitId === 'agy:3p-5h')?.state).not.toBe('reset');
+  });
 });

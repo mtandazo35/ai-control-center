@@ -178,7 +178,12 @@ export class Store {
     for (const q of out) {
       if (q.source === 'antigravity-usage' && (usageAt.get(q.accountId) ?? '') < q.observedAt) usageAt.set(q.accountId, q.observedAt);
     }
-    const kept = out.filter((q) => !(q.limitId === 'agy:individual' && usageAt.has(q.accountId) && q.observedAt <= usageAt.get(q.accountId)!));
+    // A bucket the newest /usage reading no longer lists (agy 1.5.18 dropped «Argon») is gone, not «stale».
+    const kept = out.filter(
+      (q) =>
+        !(q.limitId === 'agy:individual' && usageAt.has(q.accountId) && q.observedAt <= usageAt.get(q.accountId)!) &&
+        !(q.source === 'antigravity-usage' && q.observedAt < (usageAt.get(q.accountId) ?? '')),
+    );
     // Claude: an activity estimate (no %) never hides a recent real reading of the same window. The real one wins when
     // it was observed at most 30 min before the estimate and its reset is still ahead of the estimate.
     return kept.map((q) => {

@@ -115,7 +115,8 @@
     const agyOfficial = gem && p.buckets.some((b) => b.source === 'antigravity-usage' && b.state === 'live');
     // Antigravity groups that do not decide the account (Claude/GPT, Argon) and are unused: one line, no bars.
     // Their window only starts counting when used, so their «reset time» moves on every reading and says nothing.
-    const idleGroup = (b) => b.extra && b.extra.scoring === false && b.state === 'live' && b.usedPercent === 0;
+    // Shown only while that group is really being used (live and above 0 %); reset/stale/unknown stay on the line.
+    const idleGroup = (b) => b.extra && b.extra.scoring === false && !(b.state === 'live' && b.usedPercent > 0);
     const shown = p.buckets.filter((b) => !idleGroup(b));
     const idleNames = [...new Set(p.buckets.filter(idleGroup).map((b) => (b.displayLabel || b.label).split(' · ')[0]))];
     const ctx = p.sessionContext && p.sessionContext.percent !== null ? p.sessionContext : null;
